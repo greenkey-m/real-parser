@@ -1,0 +1,57 @@
+{{ header }}{{ column_left }}
+<div id="content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="pull-right">
+                <button type="submit" form="form-hello_world" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa fa-save"></i></button>
+                <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i class="fa fa-reply"></i></a></div>
+                <h1>{{ heading_title }}</h1>
+                <ul class="breadcrumb">
+                    {% for breadcrumb in breadcrumbs %}
+                    <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="container-fluid">      
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_edit }}</h3>
+                </div>
+                <div class="panel-body">
+                    <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-hello_world" class="form-horizontal">
+                        <div class="tab-content">
+                            <div id="tab-hello_world" class="tab-pane active">
+                                <div class="form-group required">
+                                    <label class="col-sm-2 control-label" for="input-id"><span data-toggle="tooltip" title="{{ help_id|e }}">{{ entry_id }}</span></label>
+                                    <div class="col-sm-10">
+                                        <input type="text" name="module_hello_world_id" value="{{ module_hello_world_id }}" placeholder="{{ entry_id }}" id="input-id" class="form-control" />                              
+                                        {% if error_id %}
+                                        <div class="text-danger">{{ error_id }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label" for="input-module_hello_world_status">{{ entry_status }}</label>
+                                    <div class="col-sm-10">
+                                        <select name="module_hello_world_status" id="input-module_hello_world_status" class="form-control">                  
+                                            {% if module_hello_world_status %}
+                                            <option value="1" selected>{{ text_enabled }}</option>                  
+                                            <option value="0">{{ text_disabled }}</option>                  
+                                            {% else  %}
+                                            <option value="1">{{ text_enabled }}</option>
+                                            <option value="0" selected>{{ text_disabled }}</option>
+                                            {% endif %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{{ footer }}
