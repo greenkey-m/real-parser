@@ -1,6 +1,6 @@
 <?php
 // Heading
-$_['heading_title']    		= 'Hello World';
+$_['heading_title']    		= 'Electrozon parser';
 
 // Text
 $_['text_extension']   		= 'Extensions';
