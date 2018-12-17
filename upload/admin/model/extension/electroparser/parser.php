@@ -23,27 +23,29 @@ CONST ELECTROZON_PATH = 'https://electrozon.ru/files/market_filial_new.yml';
 
 // подключение конфига магазина
 //require('../../../config.php');
-require $_SERVER['DOCUMENT_ROOT'].'/admin/config.php';
+require $_SERVER['DOCUMENT_ROOT'] . '/admin/config.php';
 
 // Функция транслита имен категорий и товаров для SEO
-function translit($s) {
-    $s = (string) $s; // преобразуем в строковое значение
+function translit($s)
+{
+    $s = (string)$s; // преобразуем в строковое значение
     $s = strip_tags($s); // убираем HTML-теги
     $s = str_replace(array("\n", "\r"), " ", $s); // убираем перевод каретки
     $s = preg_replace("/\s+/", ' ', $s); // удаляем повторяющие пробелы
     $s = trim($s); // убираем пробелы в начале и конце строки
     $s = function_exists('mb_strtolower') ? mb_strtolower($s) : strtolower($s); // переводим строку в нижний регистр (иногда надо задать локаль)
-    $s = strtr($s, array('а'=>'a','б'=>'b','в'=>'v','г'=>'g','д'=>'d','е'=>'e','ё'=>'e','ж'=>'j','з'=>'z','и'=>'i','й'=>'y','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'h','ц'=>'c','ч'=>'ch','ш'=>'sh','щ'=>'shch','ы'=>'y','э'=>'e','ю'=>'yu','я'=>'ya','ъ'=>'','ь'=>''));
+    $s = strtr($s, array('а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'e', 'ж' => 'j', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'ш' => 'sh', 'щ' => 'shch', 'ы' => 'y', 'э' => 'e', 'ю' => 'yu', 'я' => 'ya', 'ъ' => '', 'ь' => ''));
     $s = preg_replace("/[^0-9a-z-_ ]/i", "", $s); // очищаем строку от недопустимых символов
     $s = str_replace(" ", "-", $s); // заменяем пробелы знаком минус
     return $s; // возвращаем результат
 }
 
 // Переменная для рекурсивной функции составления пути категории
-$pathy = array ();
+$pathy = array();
 
 // Рекурсивная функция для составления пути категории
-function getpath($id) {
+function getpath($id)
+{
     // найти элемент с id
     // внести его в массив
     // если у него есть родитель, повторить
@@ -69,7 +71,7 @@ try {
 
     // загрузка файла из electrozon.ru
     if (!copy(ELECTROZON_PATH, 'market_filial_new.yml.xml'))
-        throw new Exception('File '.ELECTROZON_PATH.' with goods from electozon.ru not availiable.');
+        throw new Exception('File ' . ELECTROZON_PATH . ' with goods from electozon.ru not availiable.');
 
     // Загружаем DOM из файла
     $doc = new DOMDocument();
@@ -78,8 +80,7 @@ try {
     // Выбираем все категории товаров
     $cats = $doc->getElementsByTagName('category');
     // Выбираем все товары
-    //$prods = $doc->getElementsByTagName( 'offer' );
-    $prods = array();
+    $prods = $doc->getElementsByTagName('offer');
 
     // Составляем массив категорий, с id родителя, для составления пути категории (нужно для БД opencart)
     $cat_array = array();
@@ -96,12 +97,21 @@ try {
     }
     echo $mysqli->host_info . "<br/>\n";
 
+    // Получаем установленный язык для магазина (из настроек) и таблицы
+    $q = "SELECT language_id FROM " . DB_PREFIX . "language WHERE `code`=(SELECT `value` FROM " . DB_PREFIX . "setting WHERE `key`='config_language')";
+    if (!$result = $mysqli->query($q)) {
+        throw new Exception('Problem in opencart installation settings.');
+    }
+    $base_lang = 1;
+    $base_lang = (Int)$result->fetch_object()->language_id;
+
     // Получаем базовую наценку для товаров
     $q = 'SELECT `value` FROM ' . DB_PREFIX . 'setting WHERE `key`="dashboard_electroparser_markup"';
     if (!$result = $mysqli->query($q)) {
         throw new Exception('Markup price not found or not set in opencart shop. Install extension or setup this setting.');
     }
     $base_markup = (Int)$result->fetch_object()->value;
+
     // Получаем таблицу с наценками по категориям (если наценки нет, то в массиве будет пустое значение
     $q = 'SELECT c.category_id, c.parent_id, d.name, m.markup FROM `' . DB_PREFIX .
         'category` c JOIN `' . DB_PREFIX . 'category_description` d ON c.category_id = d.category_id LEFT JOIN `' . DB_PREFIX .
@@ -113,15 +123,13 @@ try {
         throw new Exception('Categories table not found');
     } else {
         if ($result->num_rows > 0) {
-            //TODO что удобнее, ассоциативный или объект? fetch_object()
             while ($obj = $result->fetch_assoc()) {
                 $category_markup[] = $obj;
             }
-            //print_r ($category_markup);
         } else {
             // Нет категорий вообще, поэтому будет установлена базовая наценка для всех
             // важно - наценки не могут существовать без категорий в БД!
-            fwrite($logfile, 'No categories in DB');
+            fwrite($logfile, "No categories in DB\n");
             echo "No categories in DB<br>";
         }
     }
@@ -132,6 +140,24 @@ try {
     // В конце помечаем те, которые отсутствуют как deleted
     // Если изменено название - помечаем это как changed
     // Остальные - hold
+
+    // Очищаем дополнительные таблицы с описаниями и путями TRUNCATE TABLE Table1
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "category_description";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "category_path";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "category_to_store";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate category table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+
     foreach ($cats as $cat) {
         // Название категории
         $name = $cat->nodeValue;
@@ -169,27 +195,33 @@ try {
         // TODO даты
         // Дата добавление - берем текущую (можно оставлять старую, если статус hold
         // Дата изменения - ставим текущую, если изменяем, для тех! у кого state - changed
-        $q = "INSERT INTO re_category(category_id, parent_id, top, `column`, sort_order, status, date_added, date_modified) VALUES " .
-            "($category_id, $parent_id, $top, 0, 0, 1, now(), now())";
-        if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+
+        if ($state == "new") {
+            $q = "INSERT INTO " . DB_PREFIX . "category(category_id, parent_id, top, `column`, sort_order, status, date_added, date_modified) VALUES " .
+                "($category_id, $parent_id, $top, 0, 0, 1, now(), now())";
+        };
+        if ($state == "changed") {
+            $q = "UPDATE " . DB_PREFIX . "category SET parent_id=$parent_id, top=$top, date_modified=now()  WHERE category_id = $category_id";
+        }
+        if ($state <> "hold") {
+            if (!$mysqli->query($q)) {
+                fwrite($logfile, "Cannot write category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            }
         }
 
         // Вставляем в таблицу описаний
-        // language_id - берем дефолтный 1 TODO надо прочитать какой язык в настройках дефолтный
+        // language_id - берем из настроек $base_lang
         // name - имя
         // description - пустой, никаких описаний не передается, его не изменять! если не мняется название
-        // TODO чтобы можно было задавать свои описания и они сохранялись
         // meta_title - записывать туда название, это для заголовка страницы
         // Записывать только если state - new!
-        $q = "INSERT INTO re_category_description(category_id, language_id, `name`, description, meta_title) VALUES " .
-            "($category_id, 1, '$name', '$desc', '$name')";
+        $q = "INSERT INTO " . DB_PREFIX . "category_description(category_id, language_id, `name`, description, meta_title) VALUES " .
+            "($category_id, $base_lang, '$name', '$desc', '$name')";
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
+            fwrite($logfile, "Cannot write category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
             echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
         }
-
 
         // Обнуляем массив для составления пути категории
         $pathy = array();
@@ -199,67 +231,71 @@ try {
         $pathy = array_reverse($pathy);
         // Сохраняем путь в таблицу с путем, и записываем уровень каждой записи level, верхний уровень 0
         foreach ($pathy as $level => $catlevel) {
-            $q = "INSERT INTO re_category_path(category_id, path_id, level) VALUES " .
+            $q = "INSERT INTO " . DB_PREFIX . "category_path(category_id, path_id, level) VALUES " .
                 "($category_id, $catlevel, $level)";
             if (!$mysqli->query($q)) {
-                fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
+                fwrite($logfile, "Cannot write category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
                 echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
             }
         }
 
         // Делаем записть в таблицу с магазинами
         // TODO тут надо будет определять, в какой магаз записывать
-        $q = "INSERT INTO re_category_to_store(category_id, store_id) VALUES " .
+        $q = "INSERT INTO " . DB_PREFIX . "category_to_store(category_id, store_id) VALUES " .
             "($category_id, 0)";
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
+            fwrite($logfile, "Cannot write category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
             echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
         // записываем это в лог temp
-        fwrite($logfile, "#$state>>> $category_id - $name - $parent_id - $link\n");
-        echo "<p>$state - $category_id - $name - $parent_id - $link</p>\n";
+        fwrite($logfile, "c#$state>>> $category_id - $name - $parent_id - $link\n");
+        echo "<p>c#$state>>> $category_id - $name - $parent_id - $link</p>\n";
 
     }
 
-    // Проходим по массиву, определяем какие были удалены
+    // Проходим по массиву, определяем какие были удалены, записываем в лог
     foreach ($category_markup as $key => $item) {
         if (!isset($item['state'])) {
             $item['state'] = 'deleted';
             $category_markup[$key]['state'] = 'deleted';
-            // TODO записываем это в лог temp
-            echo "<p>" . $item['state'] . " - " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "</p>\n";
-            fwrite($logfile, "#" . $item['state'] . ">>> " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "\n");
-            // TODO надо ли удаленные категории делать неактивными???
-            // Возможно, надо проверять, если это категории из Электрозона, то делать неактивными,
-            // на случай если будут и другие категории
+            fwrite($logfile, "c#" . $item['state'] . ">>> " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "\n");
+            echo "<p>c#" . $item['state'] . ">>> " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "</p>\n";
         };
     }
+    // Удаляем из основной таблицы категорий те, которые были исключены из поставки
+    $q = "DELETE FROM " . DB_PREFIX . "category WHERE category_id NOT IN (SELECT category_id FROM " . DB_PREFIX . "category_description)";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot clear deleted category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot clear deleted category: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
 
+    // TODO лучше всего установить параметр в админке, который будет определять, что с ними (категориями) делать:
+    // удалять, деактивировать, сохранять как было, если их нет в обновлении
 
-    // TODO подгружаем базу в скрипт товары из БД
-    // TODO если нужно сверять появление новых, изменения и удаление старых
-    // такой вариант скрипта значительно загружает ОП, хоть и быстрее
-    /*$products = array();
-    // Получаем таблицу с товарами, которые есть в БД
-    $q = 'SELECT p.product_id, p.model, p.image, p.manufacturer_id, p.price, p.date_available, p.date_added, p.date_modified, d.name, d.description, c.category_id FROM `'.DB_PREFIX.
-        'product` p JOIN `'.DB_PREFIX.'product_description` d ON p.product_id = d.product_id JOIN `'.DB_PREFIX.
-        'product_to_category` c ON (p.product_id = c.product_id)';
-    if (!$result = $mysqli->query($q)) {
-        // Такой таблицы еще нет (нет продуктов вообще)
-        echo "Products not found";
-    } else {
-        //TODO что удобнее, ассоциативный или объект? fetch_object()
-        while ($obj = $result->fetch_assoc()) {
-            $products[] = $obj;
-            print_r($obj);
-            echo "<br/>";
-        }
-        //print_r ($products);
-    }*/
 
     // Получаем текущую дата-время для записи в БД
     $date_now = date("Y-m-d H:i:s");
+
+    // Очищаем дополнительные таблицы товаров.
+    // В основной и в описании в конце удалим те, которые были исключены из обновления,
+    // Предварительно сохранив их в лог
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "product_reward";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "product_to_category";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "product_to_store";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
+
 
     // Проходим по массиву товаров
     foreach ($prods as $prod) {
@@ -280,15 +316,15 @@ try {
         // проверить, есть ли основное изображение
         $picnodes = $prod->getElementsByTagName('picture');
         if ($picnodes->length > 0) {
-            // Получаем путь тзображения
+            // Получаем путь изображения
             $picture = $prod->getElementsByTagName('picture')->item(0)->nodeValue;      // image
             // разбиваем путь на части
             $path_parts = pathinfo($picture);
             // составляем локальный путь картинки
             $image = "catalog/product/" . $path_parts['filename'] . "." . $path_parts['extension'];
-            // TODO если файл присутствует, надо ли сравнить? например, копировать если отличается
-            if (!file_exists("./image/" . $image)) {
-                copy($picture, "./image/".$image);
+            // TODO сделать параметр, который определяет, надо ли скачивать заново файлы существующего товара
+            if (!file_exists($_SERVER['DOCUMENT_ROOT']."/image/" . $image)) {
+                copy($picture, $_SERVER['DOCUMENT_ROOT']."/image/" . $image);
             } else {
                 // Возможная проверка на изменение изображения
                 // Check changing file
@@ -296,13 +332,12 @@ try {
                 // $md5file = md5($contents);
                 // if ($md5file == md5_file("./image/".$image) - not change
                 // echo "file exists! ";
+                //copy($picture, "./image/".$image);
             }
         } else {
             // если изображения нет, вставляем пустое поле
             $image = "";
         }
-
-        // TODO либо просто очищаем таблицы с товаром перед записью, если не надо контролировать изменения
 
         // Заменяем апострофы на кавычку. Можно заменять на код апострофа, в принципе
         $name = str_replace("'", '"', $prod->getElementsByTagName('name')->item(0)->nodeValue);                 // name         // meta_title
@@ -320,21 +355,23 @@ try {
         // TODO Для этого надо сначала подгрузить таблицу с параметрами в скрипт
 
         // Запрашиваем этот товар в существующей таблице, если он есть, сравниваем с обновлением
-        // Если отличается, то меняем дату СОЗДАНИЯ, если не отличается - то дату МОДИФИКАЦИИ
-        // потому что цена не проверяется, да и в целом проверить невозможно, а так мы сможем
-        // вычислить те товары, которые быди удалены в обновлении
         // Если отсутствует такой товар, то значит новый, добавляем, даты одинаковые
+        // Если товар существует, то обновляем, и дату модификации
         // Дату устанавливаем с помощью PHP, чтобы она была одинакова
-        $q = 'SELECT p.product_id, p.model, p.image, p.manufacturer_id, p.price, p.date_available, p.date_added, p.date_modified, d.name, d.description, c.category_id FROM `' . DB_PREFIX .
+        // Ниже - это полный запрос, на получение всех данных товара для сверки
+        /*$q = 'SELECT p.product_id, p.model, p.image, p.manufacturer_id, p.price, p.date_available, p.date_added, p.date_modified, d.name, d.description, c.category_id FROM `' . DB_PREFIX .
             'product` p JOIN `' . DB_PREFIX . 'product_description` d ON p.product_id = d.product_id JOIN `' . DB_PREFIX .
-            'product_to_category` c ON (p.product_id = c.product_id) WHERE p.product_id = ' . $product_id;
-        // Этот статус не останется, т.к. мы не сверяем данные
+            'product_to_category` c ON (p.product_id = c.product_id) WHERE p.product_id = ' . $product_id;*/
+        // Берем короткий запрос, для проверки наличия товара
+        $q = 'SELECT product_id FROM `' . DB_PREFIX . 'product` WHERE product_id = ' . $product_id;
+        // Этот статус не останется, т.к. мы не сверяем данные, будет либо changed либо new
         $state = "hold";
         if (!$result = $mysqli->query($q)) {
             throw new Exception('No product tables, or DB not available.');
         } else {
             if ($result->num_rows > 0) {
                 //$product = $result->fetch_object();
+                // сверять не будем, просто обновляем
                 $state = "changed";
             } else {
                 $state = "new";
@@ -342,89 +379,126 @@ try {
         }
 
         // сохраняем в основную таблицу
-        $q = "INSERT INTO re_product(product_id, model, quantity, stock_status_id, image, manufacturer_id, price, tax_class_id, date_available, status, date_added, date_modified) VALUES " .
-            "($product_id, '$model', 100, 7, '$image', 0, $price, 9, now(), 1, now(), now())";
+        if ($state == "new") {
+            $q = "INSERT INTO " . DB_PREFIX . "product(product_id, model, quantity, stock_status_id, image, " .
+                "manufacturer_id, price, tax_class_id, date_available, status, date_added, date_modified) VALUES " .
+                "($product_id, '$model', 100, 7, '$image', 0, $price, 9, '$date_now', 1, '$date_now', '$date_now')";
+        } else {
+            $q = "UPDATE " . DB_PREFIX . "product SET model='$model', image='$image', " .
+                "price=$price, date_modified='$date_now' WHERE product_id = $product_id";
+        }
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            fwrite($logfile, "Cannot write product: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot write product: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
-        // сохраняем описание товара
-        // TODO для разных языков? только для русского!
         // TODO Meta-description - туда загружаем короткое описание
         // TODO Спецификацию загружаем в description
         // TODO Либо проработать сохранение в специальную вкладку, которую можно создать с помощью materialize extension -  шаблоне
-        $q = "INSERT INTO re_product_description(product_id, language_id, `name`, description, meta_title) VALUES " .
-            "($product_id, 1, '$name', '$desc', '$name')";
+        // TODO Оттуда жк загружаем все дополнительные изображения в product_image
+        // сохраняем описание товара
+        if ($state == "new") {
+            $q = "INSERT INTO " . DB_PREFIX . "product_description(product_id, language_id, `name`, description, " .
+                "meta_title, meta_description) VALUES ($product_id, $base_lang, '$name', '$desc', '$name', '$desc')";
+        } else {
+            $q = "UPDATE " . DB_PREFIX . "product_description SET `name`='$name', description='$desc', " .
+                "meta_title='$name', meta_description='$desc' WHERE product_id = $product_id";
+        }
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            fwrite($logfile, "Cannot write product desc: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot write product desc: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
         // сохраняем таблицу с очками, которые даются за товар (ставим по умолчанию 0)
-        $q = "INSERT INTO re_product_reward(product_id, customer_group_id, points) VALUES " .
+        $q = "INSERT INTO " . DB_PREFIX . "product_reward(product_id, customer_group_id, points) VALUES " .
             "($product_id, 1, 0)";
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            fwrite($logfile, "Cannot write product reward: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot write product reward: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
         // сохраняем связь товара с категорией
-        // TODO тут можно привязать показ товара во всех родительских категориях! если надо
-        $q = "INSERT INTO re_product_to_category(product_id, category_id) VALUES " .
+        // можно привязать показ товара во всех родительских категориях, если надо
+        $q = "INSERT INTO " . DB_PREFIX . "product_to_category(product_id, category_id) VALUES " .
             "($product_id, $category_id)";
         if (!$mysqli->query($q)) {
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            fwrite($logfile, "Cannot write product category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot write product category: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
         // сохраняем связь с магазином
-        // TODO нужно проверять какой магазин активен?
-        $q = "INSERT INTO re_product_to_store(product_id, store_id) VALUES " .
+        // TODO в какой магазин сохранять - из настроек парсера, по умолчанию = 0 (основной)
+        $q = "INSERT INTO " . DB_PREFIX . "product_to_store(product_id, store_id) VALUES " .
             "($product_id, 0)";
         if (!$mysqli->query($q)) {
-            fwrite($logfile, "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error."\n");
-            echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
+            fwrite($logfile, "Cannot write product store: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot write product store: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
         // Сохраняем в лог temp внесение записи о товаре
-        fwrite($logfile, "#$state>>> $product_id - $name - $picture<br>\n");
-        echo "$state - $product_id - $name - $picture<br>\n";
-
+        fwrite($logfile, "p#$state>>> $product_id - $name - $category_id - $picture\n");
+        echo "<p>p#$state>>> $product_id - $name - $category_id - $picture</p>\n";
     }
 
-    $products_del = array();
-    // TODO Делаем запрос в базу, на предмет тех товаров, которых там нет
-    // TODO определяем по дате модификации, если она старая - значит товар был удален из обновления
-    // TODO Надо ли их делать неактивными???
-    $q = "SELECT p.product_id, p.model, p.image, p.manufacturer_id, p.price, p.date_available, p.date_added, p.date_modified, d.name, d.description, c.category_id FROM `" . DB_PREFIX .
-        "product` p JOIN `" . DB_PREFIX . "product_description` d ON p.product_id = d.product_id JOIN `" . DB_PREFIX .
-        "product_to_category` c ON (p.product_id = c.product_id) WHERE p.date_modified <> '".$date_now."'";
+    // Делаем запрос в базу, на предмет тех товаров, которых удалены из обновления
+    // Вычислять товар можно как по дате, так и по дополнительным таблицам, которые очищались от записей
+    $q = "SELECT p.product_id, p.model, p.image, p.manufacturer_id, p.price, p.date_added, d.name FROM `" . DB_PREFIX .
+        "product` p JOIN `" . DB_PREFIX . "product_description` d ON p.product_id = d.product_id " .
+        "WHERE p.date_modified <> '" . $date_now . "'";
     if (!$result = $mysqli->query($q)) {
         // Ошибка при работе с таблицей товаров! Недоступна?
+        fwrite($logfile, 'Error while connect to product tables, possible DB not available');
         throw new Exception('Error while connect to product tables, possible DB not available');
     } else {
-        //TODO что удобнее, ассоциативный или объект? fetch_object()
         while ($obj = $result->fetch_assoc()) {
-            $products_del[] = $obj;
-            fwrite($logfile, "#deleted>>> ".$obj['product_id']." - ".$obj['name']." - ".$obj['image']."\n");
-            echo "deleted - ".$obj['product_id']." - ".$obj['name']." - ".$obj['image']."<br>\n";
+            // Для каждого удаляем файл изображения
+            unlink($_SERVER['DOCUMENT_ROOT']."/image/".$obj['image']);
+            // Потом просматриваем таблицу с изображениями и также удаляем
+            $q = "SELECT image FROM " . DB_PREFIX . "product_image WHERE product_id = " . $obj['product_id'];
+            if ($rimg = $mysqli->query($q)) {
+                while ($oimg = $rimg->fetch_assoc()) {
+                    unlink($_SERVER['DOCUMENT_ROOT']."/image/".$oimg['image']);
+                }
+                // Удаляем записи об этих изображениях
+                $q = "DELETE FROM " . DB_PREFIX . "product_image WHERE product_id = " . $obj['product_id'];
+                if (!$mysqli->query($q)) {
+                    fwrite($logfile, "Cannot clear product add image: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                    echo "Cannot clear product add image: (" . $mysqli->errno . ") " . $mysqli->error;
+                }
+            }
+            // Сохраняем удаляемый товар в лог
+            fwrite($logfile, "p#deleted>>> " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "\n");
+            echo "<p>deleted - " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "</p>>\n";
             //print_r($obj);
+        }
+        // Удаляем эти записи из основной таблицы и из таблицы описаний и дополнительные картинки
+        $q = "DELETE FROM " . DB_PREFIX . "product_description WHERE product_id IN (SELECT product_id FROM " . DB_PREFIX . "product WHERE date_modified <> '".$date_now."')";
+        if (!$mysqli->query($q)) {
+            fwrite($logfile, "Cannot clear deleted products: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot clear deleted products: (" . $mysqli->errno . ") " . $mysqli->error;
+        }
+        $q = "DELETE FROM " . DB_PREFIX . "product WHERE date_modified <> '".$date_now."'";
+        if (!$mysqli->query($q)) {
+            fwrite($logfile, "Cannot clear deleted products: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+            echo "Cannot clear deleted products: (" . $mysqli->errno . ") " . $mysqli->error;
         }
     }
 
-    // TODO переименовываем temp log с именем в которое входит дата и время создания
+    // переименовываем temp log с именем в которое входит дата и время создания
+    rename('temp', date("Y-m-d_H-i").".log");
+
     // можно имя использовать для определения срока в админке, либо по атрибутам файла
     // также в админке выводить что происходило с категориями и товарами
 
 } catch (Throwable $e) {
-    echo '<p class="error">ERROR: '.$e->getMessage();
+    echo '<p class="error">ERROR: ' . $e->getMessage();
     // запись в лог работы парсера
-    fwrite($logfile, "ERROR: ".$e->getMessage()."\n");
+    fwrite($logfile, "ERROR: " . $e->getMessage() . "\n");
     //print_r($e);
 } catch (Exception $e) {
-    echo '<p class="exception">EXCEPTION: '.$e->getMessage().'</p>';
+    echo '<p class="exception">EXCEPTION: ' . $e->getMessage() . '</p>';
     // запись в лог работы парсера
-    fwrite($logfile, "EXCEPTION: ".$e->getMessage()."\n");
+    fwrite($logfile, "EXCEPTION: " . $e->getMessage() . "\n");
     //print_r($e);
 }
 
