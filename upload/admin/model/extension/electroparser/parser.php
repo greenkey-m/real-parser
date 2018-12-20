@@ -7,6 +7,12 @@
         .error, .exception {
             color: red;
         }
+        .deleted {
+            color: #78909c;
+        }
+        .new {
+            color: blue;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +71,7 @@ try {
     $logfile = fopen("temp", 'a+');
 
     // TODO Как вариант, проверка когда последний раз был парсер
+    // параметр частоты - из параметров компонента
     // если менее чем параметр частоты, то остановить скрипт
     // проверка по дате лога
     // в целом, запуск скрипта осуществляется по cron
@@ -174,7 +181,6 @@ try {
             $top = 0;
         }
         // Создаем транслит
-        // TODO его надо будет записывать в таблицу re_seo_url!
         $link = translit($name);
         // Пока запишем в описание категории
         $desc = $link;
@@ -248,9 +254,31 @@ try {
             echo "Cannot write: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
+        // Сохраняем seo ссылку на категорию
+        $q = "SELECT * FROM " . DB_PREFIX . "seo_url WHERE (`query` = 'category_id=$category_id') AND (store_id = 0) AND (language_id = 1)";
+        if (!$result = $mysqli->query($q)) {
+            // Такой таблицы (ссылки) нет
+            fwrite($logfile,'Table with seo links not found');
+            throw new Exception('Table with seo links not found');
+        } else {
+            if ($result->num_rows > 0) {
+                // Обновляем запись
+                $q = "UPDATE " . DB_PREFIX . "seo_url SET keyword='$link' WHERE (query = 'category_id=$category_id') AND (store_id = 0) AND (language_id = 1)";
+            } else {
+                // Вставляем запись
+                $q = "INSERT INTO " . DB_PREFIX . "seo_url (store_id, language_id, query, keyword) VALUES (0, 1, 'category_id=$category_id', '$link')";
+            }
+        }
+        if (!$result = $mysqli->query($q)) {
+            // Невозможно записать ссылку
+            fwrite($logfile,'Cannot save seo link for category');
+            // Тут необязательно делать критический сброс
+            throw new Exception('Cannot save seo link for category');
+        }
+
         // записываем это в лог temp
         fwrite($logfile, "c#$state>>> $category_id - $name - $parent_id - $link\n");
-        echo "<p>c#$state>>> $category_id - $name - $parent_id - $link</p>\n";
+        echo "<p class='$state'>c#$state>>> $category_id - $name - $parent_id - $link</p>\n";
 
     }
 
@@ -332,6 +360,7 @@ try {
                 // $md5file = md5($contents);
                 // if ($md5file == md5_file("./image/".$image) - not change
                 // echo "file exists! ";
+                // TODO в параметрах задать - надо ли обновлять картинки, если они есть.
                 //copy($picture, "./image/".$image);
             }
         } else {
@@ -341,6 +370,7 @@ try {
 
         // Заменяем апострофы на кавычку. Можно заменять на код апострофа, в принципе
         $name = str_replace("'", '"', $prod->getElementsByTagName('name')->item(0)->nodeValue);                 // name         // meta_title
+        $link = translit($name);
         // Получаем имя производителя manufacturer
         $vendor = $prod->getElementsByTagName('vendor')->item(0)->nodeValue;
         // код товара по производителю
@@ -435,9 +465,32 @@ try {
             echo "Cannot write product store: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
+        // Сохраняем seo ссылку на товар
+        // TODO добавить указание магазина и языка из настроек! и для категорий тоже
+        $q = "SELECT * FROM " . DB_PREFIX . "seo_url WHERE (`query` = 'product_id=$product_id') AND (store_id = 0) AND (language_id = 1)";
+        if (!$result = $mysqli->query($q)) {
+            // Такой таблицы (ссылки) нет
+            fwrite($logfile,'Table with seo links not found');
+            throw new Exception('Table with seo links not found');
+        } else {
+            if ($result->num_rows > 0) {
+                // Обновляем запись
+                $q = "UPDATE " . DB_PREFIX . "seo_url SET keyword='$link' WHERE (query = 'product_id=$product_id') AND (store_id = 0) AND (language_id = 1)";
+            } else {
+                // Вставляем запись
+                $q = "INSERT INTO " . DB_PREFIX . "seo_url (store_id, language_id, query, keyword) VALUES (0, 1, 'product_id=$product_id', '$link')";
+            }
+        }
+        if (!$result = $mysqli->query($q)) {
+            // Невозможно записать ссылку
+            fwrite($logfile,'Cannot save seo link for product');
+            // Тут необязательно делать критический сброс
+            throw new Exception('Cannot save seo link for product');
+        }
+
         // Сохраняем в лог temp внесение записи о товаре
         fwrite($logfile, "p#$state>>> $product_id - $name - $category_id - $picture\n");
-        echo "<p>p#$state>>> $product_id - $name - $category_id - $picture</p>\n";
+        echo "<p class='$state'>p#$state>>> $product_id - $name - $category_id - $picture</p>\n";
     }
 
     // Делаем запрос в базу, на предмет тех товаров, которых удалены из обновления
