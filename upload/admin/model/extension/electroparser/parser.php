@@ -31,6 +31,8 @@ CONST ELECTROZON_PATH = 'https://electrozon.ru/files/market_filial_new.yml';
 //require('../../../config.php');
 require $_SERVER['DOCUMENT_ROOT'] . '/admin/config.php';
 
+require 'simple_html_dom.php';
+
 // Функция транслита имен категорий и товаров для SEO
 function translit($s)
 {
@@ -64,6 +66,18 @@ function getpath($id)
         }
     }
 }
+
+function get_page_parser($url) {
+    $html = file_get_html($url);
+    $spec = $html->find('#tab-all > table');
+    $data['spec'] = $spec[0]->outertext;
+    $imgs = $html->find('#gallery-product-thumbs > ul > li > a');
+    foreach($imgs as $e)
+        $data['images'][] = $e->href;
+    return $data;
+}
+
+
 
 try {
 
@@ -263,17 +277,20 @@ try {
         } else {
             if ($result->num_rows > 0) {
                 // Обновляем запись
-                $q = "UPDATE " . DB_PREFIX . "seo_url SET keyword='$link' WHERE (query = 'category_id=$category_id') AND (store_id = 0) AND (language_id = 1)";
+                //$q = "UPDATE " . DB_PREFIX . "seo_url SET keyword='$link' WHERE (query = 'category_id=$category_id') AND (store_id = 0) AND (language_id = 1)";
+                // TODO нужен параметр, который определит, надо ли перезаписывать. Может имена были исправлены вручную
+                // пока не изменяем!
             } else {
                 // Вставляем запись
                 $q = "INSERT INTO " . DB_PREFIX . "seo_url (store_id, language_id, query, keyword) VALUES (0, 1, 'category_id=$category_id', '$link')";
+
+                if (!$result = $mysqli->query($q)) {
+                    // Невозможно записать ссылку
+                    fwrite($logfile,'Cannot save seo link for category');
+                    // Тут необязательно делать критический сброс
+                    throw new Exception('Cannot save seo link for category');
+                }
             }
-        }
-        if (!$result = $mysqli->query($q)) {
-            // Невозможно записать ссылку
-            fwrite($logfile,'Cannot save seo link for category');
-            // Тут необязательно делать критический сброс
-            throw new Exception('Cannot save seo link for category');
         }
 
         // записываем это в лог temp
@@ -323,10 +340,23 @@ try {
         fwrite($logfile, "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
         echo "Cannot truncate product table: (" . $mysqli->errno . ") " . $mysqli->error;
     }
+    $q = "TRUNCATE TABLE " . DB_PREFIX . "product_attribute";
+    if (!$mysqli->query($q)) {
+        fwrite($logfile, "Cannot truncate product attribute table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+        echo "Cannot truncate product attribute table: (" . $mysqli->errno . ") " . $mysqli->error;
+    }
 
+
+    // Счетчик для тестирования кода
+    $counter = 0;
 
     // Проходим по массиву товаров
     foreach ($prods as $prod) {
+
+        // Для тестирования. прерывает выполнение парсера.
+        //$counter++;
+        //if ($counter > 100) break;
+
         $product_id = $prod->getAttribute('id');                                        // product_id
         $available = $prod->getAttribute('available');                                  // доступность, true, false
         $url = $prod->getElementsByTagName('url')->item(0)->nodeValue;
@@ -379,10 +409,40 @@ try {
         $desc = str_replace("'", '"', $prod->getElementsByTagName('description')->item(0)->nodeValue);          // description
         // TODO Штрикод - пока не используется, но можно привязать его, и выводить КОД ДЛЯ СКАНЕРА! можно печатать
         $barcode = $prod->getElementsByTagName('barcode')->item(0)->nodeValue;
-        // TODO получить параметры товара и сверить их с существующими пармаметрами
-        // TODO Если таких параметров в БД нет, то их надо создать, и записать для этого товара
-        // TODO Если есть, то просто записать их
-        // TODO Для этого надо сначала подгрузить таблицу с параметрами в скрипт
+        // Получаем список атрибутов товара
+        $params = $prod->getElementsByTagName('param');
+
+        $page = get_page_parser($url);
+        // получаем спецификацию $page['spec']
+        // изображения $page['images']
+        $spec = $page['spec'];
+
+        // Записываем vendor в таблицу manufacturer, если его нет, читаем полученный новый id
+        // Если он есть, берем его id для записи в таблицу товара
+        // TODO учесть наличие возможных нескольких магазинов! тогда надо вторую таблицу цеплять
+        $manufacturer_id = 0;
+        $q = "SELECT manufacturer_id FROM " . DB_PREFIX . "manufacturer WHERE (`name` = '$vendor')";
+        if (!$result = $mysqli->query($q)) {
+            // Недоступна таблица поставщиков!
+            fwrite($logfile,'Manufacturer (vendor) table not available');
+            throw new Exception('Manufacturer (vendor) table not available');
+        } else {
+            if ($result->num_rows == 0) {
+                // Создаем запись производителя, получаем его id
+                $q = "INSERT INTO " . DB_PREFIX . "manufacturer (`name`, sort_order) ".
+                    "VALUES ('$vendor', 0)";
+                if (!$result = $mysqli->query($q)) {
+                    // Недоступна таблица поставщиков!
+                    fwrite($logfile,'Manufacturer (vendor) table not available');
+                    throw new Exception('Manufacturer (vendor) table not available');
+                }
+                $manufacturer_id = $mysqli->insert_id;
+            } else {
+                // Получаем его id, для записи в таблицу товара из первой полученной строки
+                $obj = $result->fetch_assoc();
+                $manufacturer_id = $obj['manufacturer_id'];
+            }
+        }
 
         // Запрашиваем этот товар в существующей таблице, если он есть, сравниваем с обновлением
         // Если отсутствует такой товар, то значит новый, добавляем, даты одинаковые
@@ -410,9 +470,9 @@ try {
 
         // сохраняем в основную таблицу
         if ($state == "new") {
-            $q = "INSERT INTO " . DB_PREFIX . "product(product_id, model, quantity, stock_status_id, image, " .
+            $q = "INSERT INTO " . DB_PREFIX . "product(product_id, model, sku, quantity, stock_status_id, image, " .
                 "manufacturer_id, price, tax_class_id, date_available, status, date_added, date_modified) VALUES " .
-                "($product_id, '$model', 100, 7, '$image', 0, $price, 9, '$date_now', 1, '$date_now', '$date_now')";
+                "($product_id, '$model', 'EZON-$product_id', 100, 7, '$image', $manufacturer_id, $price, 9, '$date_now', 1, '$date_now', '$date_now')";
         } else {
             $q = "UPDATE " . DB_PREFIX . "product SET model='$model', image='$image', " .
                 "price=$price, date_modified='$date_now' WHERE product_id = $product_id";
@@ -422,14 +482,14 @@ try {
             echo "Cannot write product: (" . $mysqli->errno . ") " . $mysqli->error;
         }
 
-        // TODO Meta-description - туда загружаем короткое описание
-        // TODO Спецификацию загружаем в description
-        // TODO Либо проработать сохранение в специальную вкладку, которую можно создать с помощью materialize extension -  шаблоне
-        // TODO Оттуда жк загружаем все дополнительные изображения в product_image
+        // Meta-description - туда загружаем короткое описание
+        // Спецификацию с сайта загружаем в description
+        // Оттуда жк загружаем все дополнительные изображения в product_image
+
         // сохраняем описание товара
         if ($state == "new") {
             $q = "INSERT INTO " . DB_PREFIX . "product_description(product_id, language_id, `name`, description, " .
-                "meta_title, meta_description) VALUES ($product_id, $base_lang, '$name', '$desc', '$name', '$desc')";
+                "meta_title, meta_description) VALUES ($product_id, $base_lang, '$name', '$spec', '$name', '$desc')";
         } else {
             $q = "UPDATE " . DB_PREFIX . "product_description SET `name`='$name', description='$desc', " .
                 "meta_title='$name', meta_description='$desc' WHERE product_id = $product_id";
@@ -437,6 +497,52 @@ try {
         if (!$mysqli->query($q)) {
             fwrite($logfile, "Cannot write product desc: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
             echo "Cannot write product desc: (" . $mysqli->errno . ") " . $mysqli->error;
+        }
+
+        // Сохраняем дополнительные изображения, если они есть
+        $c = 0;
+        foreach ($page['images'] as $img) {
+            $c++;
+            // Получаем путь изображения
+            $path_parts = pathinfo($img);
+            // составляем локальный путь картинки
+            $imglocal = "catalog/product/" . $path_parts['filename'] . "." . $path_parts['extension'];
+            //echo $image." === ".$imglocal."<br>";
+            if (($image <> "") && ($c == 1)) continue;
+
+            $q = "SELECT * FROM " . DB_PREFIX . "product_image WHERE (product_id = $product_id) AND (image = '$imglocal')";
+            if (!$result = $mysqli->query($q)) {
+                fwrite($logfile, "Cannot access to product image table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                echo "Cannot access to product image table (" . $mysqli->errno . ") " . $mysqli->error;
+            } else {
+                // Если такой рисунок уже есть, ничего не делать?
+                // TODO определить в настрйоках, надо ли обновлять картинки которые уже есть
+                if ($result->num_rows > 0) {
+                    // если запись есть, все нормально переходим к загрузке файла
+                } else {
+                    // если записи нет, делаем ее
+                    $q = "INSERT INTO " . DB_PREFIX . "product_image(product_id, image, sort_order) VALUES " .
+                        "($product_id, '$imglocal', 0)";
+                    if (!$mysqli->query($q)) {
+                        fwrite($logfile, "Cannot write to product image table: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                        echo "Cannot write to product image table (" . $mysqli->errno . ") " . $mysqli->error;
+                    }
+                }
+                if (!file_exists($_SERVER['DOCUMENT_ROOT']."/image/" . $imglocal)) {
+                    copy("https://electrozon.ru".$img, $_SERVER['DOCUMENT_ROOT']."/image/" . $imglocal);
+                } else {
+                    // Возможная проверка на изменение изображения
+                    // Check changing file
+                    // $contents = file_get_contents($picture);
+                    // $md5file = md5($contents);
+                    // if ($md5file == md5_file("./image/".$image) - not change
+                    // echo "file exists! ";
+                    // TODO в параметрах задать - надо ли обновлять картинки, если они есть.
+                    //copy($picture, "./image/".$image);
+                }
+
+            }
+
         }
 
         // сохраняем таблицу с очками, которые даются за товар (ставим по умолчанию 0)
@@ -476,6 +582,7 @@ try {
             if ($result->num_rows > 0) {
                 // Обновляем запись
                 $q = "UPDATE " . DB_PREFIX . "seo_url SET keyword='$link' WHERE (query = 'product_id=$product_id') AND (store_id = 0) AND (language_id = 1)";
+                // TODO нужен параметр, который определит, надо ли перезаписывать. Может имена были исправлены вручную
             } else {
                 // Вставляем запись
                 $q = "INSERT INTO " . DB_PREFIX . "seo_url (store_id, language_id, query, keyword) VALUES (0, 1, 'product_id=$product_id', '$link')";
@@ -486,6 +593,63 @@ try {
             fwrite($logfile,'Cannot save seo link for product');
             // Тут необязательно делать критический сброс
             throw new Exception('Cannot save seo link for product');
+        }
+
+        foreach ($params as $param) {
+            // Ищем параметр-атрибут с таким же name
+            // если есть берем его id, если нет - создаем и получаем id
+            $param_name = str_replace("'", '"', $param->getAttribute('name'));
+            $param_value = str_replace("'", '"', $param->nodeValue);
+            $q = "SELECT a.attribute_id, d.name FROM " . DB_PREFIX . "attribute a, " . DB_PREFIX . "attribute_description d ".
+                "WHERE (a.attribute_id = d.attribute_id) AND (d.language_id = 1) AND (d.name = '$param_name') LIMIT 1";
+            if (!$result = $mysqli->query($q)) {
+                // Такой таблицы (ссылки) нет
+                fwrite($logfile,'Table with product attributes not available');
+                throw new Exception('Table with product attributes not available');
+            } else {
+                if ($result->num_rows == 0) {
+                    // Вставляем новый атрибут
+                    // TODO Заменить 7 на параметр в настройках компонента - какую группу взять по умолчанию
+                    $q = "INSERT INTO " . DB_PREFIX . "attribute (attribute_group_id, sort_order) VALUES (7, 1)";
+                    if (!$result = $mysqli->query($q)) {
+                        // Такой таблицы (ссылки) нет
+                        fwrite($logfile,'Cannot insert new attribute');
+                        throw new Exception('Cannot insert new attribute');
+                    }
+                    $param_id = $mysqli->insert_id;
+                    //echo $param_id."!!!new<br>";
+                    $q = "INSERT INTO " . DB_PREFIX . "attribute_description (attribute_id, language_id, `name`) VALUES ($param_id, 1, '$param_name')";
+                    if (!$result = $mysqli->query($q)) {
+                        // Такой таблицы (ссылки) нет
+                        fwrite($logfile,'Cannot insert new attribute name');
+                        throw new Exception('Cannot insert new attribute name');
+                    }
+                } else {
+                    // Добавляем атрибут товара с полученным значением id (из первой записи) либо обновляем
+                    $param_id = $result->fetch_object()->attribute_id;
+                    //echo $param_id."found<br>";
+                }
+                // Ищем на всякий случай наличие этого атрибута у товара
+                $q = "SELECT * FROM " . DB_PREFIX . "product_attribute WHERE (product_id = $product_id) AND (attribute_id = $param_id) AND (language_id = 1)";
+                if (!$result = $mysqli->query($q)) {
+                    fwrite($logfile,'Not available product attribute table');
+                    throw new Exception('Not available product attribute table');
+                } else {
+                    // Записываем или изменяем атрибут для товара с указанным id, значение берем из значения узла
+                    if ($result->num_rows == 0) {
+                        $q = "INSERT INTO " . DB_PREFIX . "product_attribute (product_id, attribute_id, language_id, `text`) ".
+                            "VALUES ($product_id, $param_id, 1, '$param_value')";
+                    } else {
+                        $q = "UPDATE " . DB_PREFIX . "product_attribute SET `text`='$param_value' WHERE (product_id = $product_id) AND (attribute_id = $param_id) AND (language_id = 1)";
+                    }
+                }
+                if (!$result = $mysqli->query($q)) {
+                    // Недоступна запись атрибута для товара
+                    fwrite($logfile,'Cannot add attribute for product');
+                    throw new Exception('Cannot add attribute for product');
+                }
+            }
+
         }
 
         // Сохраняем в лог temp внесение записи о товаре
