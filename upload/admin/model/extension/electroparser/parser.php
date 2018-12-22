@@ -306,6 +306,13 @@ try {
             $category_markup[$key]['state'] = 'deleted';
             fwrite($logfile, "c#" . $item['state'] . ">>> " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "\n");
             echo "<p>c#" . $item['state'] . ">>> " . $item['category_id'] . " - " . $item['name'] . " - " . $item['parent_id'] . "</p>\n";
+            // и удаляем из таблицы seo links
+            $q = "DELETE FROM " . DB_PREFIX . "seo_url WHERE query = 'category_id=".$item['category_id']."'";
+            if (!$mysqli->query($q)) {
+                fwrite($logfile, "Cannot clear seo deleted category: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                echo "Cannot clear seo deleted category: (" . $mysqli->errno . ") " . $mysqli->error;
+            }
+
         };
     }
     // Удаляем из основной таблицы категорий те, которые были исключены из поставки
@@ -402,7 +409,7 @@ try {
         $name = str_replace("'", '"', $prod->getElementsByTagName('name')->item(0)->nodeValue);                 // name         // meta_title
         $link = translit($name);
         // Получаем имя производителя manufacturer
-        $vendor = $prod->getElementsByTagName('vendor')->item(0)->nodeValue;
+        $vendor = str_replace("'", '"', $prod->getElementsByTagName('vendor')->item(0)->nodeValue);
         // код товара по производителю
         $model = $prod->getElementsByTagName('vendorCode')->item(0)->nodeValue;                                                // model
         // описание товара, короткое. полная спецификация берется со страницы товара!
@@ -412,20 +419,15 @@ try {
         // Получаем список атрибутов товара
         $params = $prod->getElementsByTagName('param');
 
-        $page = get_page_parser($url);
-        // получаем спецификацию $page['spec']
-        // изображения $page['images']
-        $spec = $page['spec'];
-
         // Записываем vendor в таблицу manufacturer, если его нет, читаем полученный новый id
         // Если он есть, берем его id для записи в таблицу товара
         // TODO учесть наличие возможных нескольких магазинов! тогда надо вторую таблицу цеплять
         $manufacturer_id = 0;
-        $q = "SELECT manufacturer_id FROM " . DB_PREFIX . "manufacturer WHERE (`name` = '$vendor')";
+        $q = "SELECT * FROM " . DB_PREFIX . "manufacturer WHERE (`name` = '$vendor')";
         if (!$result = $mysqli->query($q)) {
             // Недоступна таблица поставщиков!
-            fwrite($logfile,'Manufacturer (vendor) table not available');
-            throw new Exception('Manufacturer (vendor) table not available');
+            fwrite($logfile,'Manufacturer (vendor) table not available '.$q);
+            throw new Exception('Manufacturer (vendor) table not available'.$q);
         } else {
             if ($result->num_rows == 0) {
                 // Создаем запись производителя, получаем его id
@@ -433,10 +435,18 @@ try {
                     "VALUES ('$vendor', 0)";
                 if (!$result = $mysqli->query($q)) {
                     // Недоступна таблица поставщиков!
-                    fwrite($logfile,'Manufacturer (vendor) table not available');
-                    throw new Exception('Manufacturer (vendor) table not available');
+                    fwrite($logfile,'Cannot insert to Manufacturer (vendor) table not available');
+                    throw new Exception('Cannot insert to Manufacturer (vendor) table not available');
                 }
                 $manufacturer_id = $mysqli->insert_id;
+                // Сохраняем таблицу производитель = магазин
+                $q = "INSERT INTO " . DB_PREFIX . "manufacturer_to_store (manufacturer_id, store_id) ".
+                    "VALUES ($manufacturer_id, 0)";
+                if (!$result = $mysqli->query($q)) {
+                    // Недоступна таблица поставщиков!
+                    fwrite($logfile,'Manufacturer (vendor) shop table not available');
+                    throw new Exception('Manufacturer (vendor) shop table not available');
+                }
             } else {
                 // Получаем его id, для записи в таблицу товара из первой полученной строки
                 $obj = $result->fetch_assoc();
@@ -468,6 +478,18 @@ try {
             }
         }
 
+        // Парсим сайт только в случае, когда есть новый товар
+        if ($state == "new") {
+            $page = get_page_parser($url);
+            // получаем спецификацию $page['spec']
+            // изображения $page['images']
+            $spec = str_replace("'", '"', $page['spec']);
+        } else {
+            $spec = "";
+            $page['images'] = Array();
+        }
+
+
         // сохраняем в основную таблицу
         if ($state == "new") {
             $q = "INSERT INTO " . DB_PREFIX . "product(product_id, model, sku, quantity, stock_status_id, image, " .
@@ -491,7 +513,7 @@ try {
             $q = "INSERT INTO " . DB_PREFIX . "product_description(product_id, language_id, `name`, description, " .
                 "meta_title, meta_description) VALUES ($product_id, $base_lang, '$name', '$spec', '$name', '$desc')";
         } else {
-            $q = "UPDATE " . DB_PREFIX . "product_description SET `name`='$name', description='$desc', " .
+            $q = "UPDATE " . DB_PREFIX . "product_description SET `name`='$name', " .
                 "meta_title='$name', meta_description='$desc' WHERE product_id = $product_id";
         }
         if (!$mysqli->query($q)) {
@@ -683,6 +705,14 @@ try {
                     echo "Cannot clear product add image: (" . $mysqli->errno . ") " . $mysqli->error;
                 }
             }
+
+            // Удаляем seo запись о товаре
+            $q = "DELETE FROM " . DB_PREFIX . "seo_url WHERE query = 'product_id=".$obj['product_id']."'";
+            if (!$mysqli->query($q)) {
+                fwrite($logfile, "Cannot clear seo deleted product: (" . $mysqli->errno . ") " . $mysqli->error . "\n");
+                echo "Cannot clear seo deleted product: (" . $mysqli->errno . ") " . $mysqli->error;
+            }
+
             // Сохраняем удаляемый товар в лог
             fwrite($logfile, "p#deleted>>> " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "\n");
             echo "<p>deleted - " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "</p>>\n";
