@@ -72,6 +72,7 @@ function get_page_parser($url) {
     $spec = $html->find('#tab-all > table');
     $data['spec'] = $spec[0]->outertext;
     $imgs = $html->find('#gallery-product-thumbs > ul > li > a');
+    $data['images'] = array();
     foreach($imgs as $e)
         $data['images'][] = $e->href;
     return $data;
