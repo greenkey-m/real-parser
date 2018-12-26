@@ -716,7 +716,7 @@ try {
 
             // Сохраняем удаляемый товар в лог
             fwrite($logfile, "p#deleted>>> " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "\n");
-            echo "<p>deleted - " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "</p>>\n";
+            echo "<p class='deleted'>p#deleted>>> " . $obj['product_id'] . " - " . $obj['name'] . " - " . $obj['image'] . "</p>\n";
             //print_r($obj);
         }
         // Удаляем эти записи из основной таблицы и из таблицы описаний и дополнительные картинки

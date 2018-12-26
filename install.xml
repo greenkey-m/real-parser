@@ -2,7 +2,7 @@
 <modification>
     <name><![CDATA[<font color="#00FF00"><b>Electrozon parser</b></font>]]></name>
     <code>electroparser</code>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
     <author><![CDATA[<font color="#263238"><b>Greenkey.ru</b></font>]]></author>
     <link>https://greenkey.ru</link>
     <!-- Adding to left side menu -->
