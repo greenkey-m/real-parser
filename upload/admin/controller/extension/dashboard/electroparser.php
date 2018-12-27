@@ -16,6 +16,8 @@ class ControllerExtensionDashboardElectroparser extends Controller {
 
         // устанавливаем заголовок
         $this->document->setTitle($this->language->get('heading_title'));
+        $this->document->addScript('view/javascript/electroparser/bootstrap-treeview.min.js');
+        $this->document->addStyle('view/javascript/electroparser/bootstrap-treeview.min.css');
 
         // загружаем модель параметров
         $this->load->model('setting/setting');

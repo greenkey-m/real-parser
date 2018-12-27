@@ -8,25 +8,35 @@
     <!-- Adding to left side menu -->
     <file path="admin/controller/common/column_left.php">
         <operation error="log">
-            <search><![CDATA[
-            if ($this->user->hasPermission('access', 'catalog/information')) {
-				$catalog[] = array(
-					'name'	   => $this->language->get('text_information'),
-					'href'     => $this->url->link('catalog/information', 'user_token=' . $this->session->data['user_token'], true),
-					'children' => array()
-				);
-			}
-            ]]></search>
-            <add position="after"><![CDATA[
+            <search><![CDATA[if ($catalog) {]]></search>
+            <add position="before"><![CDATA[
 
             if ($this->user->hasPermission('access', 'catalog/information')) {
                 $catalog[] = array(
-                    'name'	   => "parser",
-                    'href'     => "parserlink",
+                    'name'	   => $this->language->get('text_electroparser'),
+                    'href'     => $this->url->link('extension/dashboard/electroparser', 'user_token=' . $this->session->data['user_token'], true),
                     'children' => array()
                 );
             }
+
 			]]></add>
         </operation>
     </file>
+    <file path="admin/language/ru-ru/common/column_left.php">
+        <operation error="log">
+            <search><![CDATA[$_['text_other_status']]]></search>
+            <add position="after" offset="1"><![CDATA[
+                $_['text_electroparser']	    = 'Парсер electrozon';
+			]]></add>
+        </operation>
+    </file>
+    <file path="admin/language/en-gb/common/column_left.php">
+        <operation error="log">
+            <search><![CDATA[$_['text_other_status']]]></search>
+            <add position="after" offset="1"><![CDATA[
+                $_['text_electroparser']	    = 'Parser electrozon';
+			]]></add>
+        </operation>
+    </file>
+
 </modification>

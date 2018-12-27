@@ -24,50 +24,123 @@
                 <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_edit }}</h3>
             </div>
             <div class="panel-body">
-                <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-dashboard" class="form-horizontal">
 
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" for="input-width">{{ entry_width }}</label>
-                        <div class="col-sm-10">
-                            <select name="dashboard_electroparser_width" id="input-width" class="form-control">
-                                {% for column in columns %}
-                                    {% if column == dashboard_electroparser_width %}
-                                        <option value="{{ column }}" selected="selected">{{ column }}</option>
-                                    {% else %}
-                                        <option value="{{ column }}">{{ column }}</option>
-                                    {% endif %}
-                                {% endfor %}
-                            </select>
-                        </div>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#tab-general" data-toggle="tab">{{ tab_general }}</a></li>
+                    <li><a href="#tab-info" data-toggle="tab">{{ tab_info }}</a></li>
+                    <li><a href="#tab-markup" data-toggle="tab">{{ tab_markup }}</a></li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <div class="tab-pane active" id="tab-general">
                     </div>
 
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
-                        <div class="col-sm-10">
-                            <select name="dashboard_electroparser_status" id="input-status" class="form-control">
-                                {% if dashboard_electroparser_status %}
-                                    <option value="1" selected="selected">{{ text_enabled }}</option>
-                                    <option value="0">{{ text_disabled }}</option>
-                                {% else %}
-                                    <option value="1">{{ text_enabled }}</option>
-                                    <option value="0" selected="selected">{{ text_disabled }}</option>
-                                {% endif %}
-                            </select>
-                        </div>
+                    <div class="tab-pane" id="tab-info">
+                        <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-dashboard" class="form-horizontal">
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" for="input-width">{{ entry_width }}</label>
+                                <div class="col-sm-10">
+                                    <select name="dashboard_electroparser_width" id="input-width" class="form-control">
+                                        {% for column in columns %}
+                                            {% if column == dashboard_electroparser_width %}
+                                                <option value="{{ column }}" selected="selected">{{ column }}</option>
+                                            {% else %}
+                                                <option value="{{ column }}">{{ column }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
+                                <div class="col-sm-10">
+                                    <select name="dashboard_electroparser_status" id="input-status" class="form-control">
+                                        {% if dashboard_electroparser_status %}
+                                            <option value="1" selected="selected">{{ text_enabled }}</option>
+                                            <option value="0">{{ text_disabled }}</option>
+                                        {% else %}
+                                            <option value="1">{{ text_enabled }}</option>
+                                            <option value="0" selected="selected">{{ text_disabled }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" for="input-sort-order">{{ entry_sort_order }}</label>
+                                <div class="col-sm-10">
+                                    <input type="text" name="dashboard_electroparser_sort_order" value="{{ dashboard_electroparser_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" for="input-sort-order">Markup</label>
+                                <div class="col-sm-10">
+                                    <input type="text" name="dashboard_electroparser_markup" value="{{ dashboard_electroparser_markup }}" placeholder="{{ entry_markup }}" id="input-markup" class="form-control" />
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" for="input-sort-order">{{ entry_sort_order }}</label>
-                        <div class="col-sm-10">
-                            <input type="text" name="dashboard_electroparser_sort_order" value="{{ dashboard_electroparser_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control" />
-                        </div>
+
+                    <div class="tab-pane" id="tab-markup">
+
+                        <script>
+                            let tree = [
+                                {
+                                    text: "Parent 1",
+                                    tags: ['0'],
+                                    nodes: [
+                                        {
+                                            text: "Child 1",
+                                            tags: ['0'],
+                                            nodes: [
+                                                {
+                                                    text: "Grandchild 1",
+                                                    tags: ['0']
+                                                },
+                                                {
+                                                    text: "Grandchild 2",
+                                                    tags: ['0']
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            text: "Child 2",
+                                            tags: ['0']
+                                        }
+                                    ]
+                                },
+                                {
+                                    text: "Parent 2",
+                                    tags: ['0']
+                                },
+                                {
+                                    text: "Parent 3",
+                                    tags: ['0']
+                                },
+                                {
+                                    text: "Parent 4 <button>click</button>"
+                                },
+                                {
+                                    text: "Parent 5"
+                                }
+                            ];
+
+                            $(document).ready(function() {
+                                $('#tree').treeview({data: tree, showTags: true});
+                            });
+
+                        </script>
+
+
+                        <div id="tree"></div>
+
+
                     </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" for="input-sort-order">Markup</label>
-                        <div class="col-sm-10">
-                            <input type="text" name="dashboard_electroparser_markup" value="{{ dashboard_electroparser_markup }}" placeholder="{{ entry_markup }}" id="input-markup" class="form-control" />
-                        </div>
-                    </div>
-                </form>
+
+                </div>
+
             </div>
         </div>
     </div>
