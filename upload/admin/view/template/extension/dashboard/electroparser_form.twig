@@ -26,14 +26,14 @@
             <div class="panel-body">
 
                 <ul class="nav nav-tabs">
-                    <li class="active"><a href="#tab-general" data-toggle="tab">{{ tab_general }}</a></li>
+                    <li><a href="#tab-general" data-toggle="tab">{{ tab_general }}</a></li>
                     <li><a href="#tab-info" data-toggle="tab">{{ tab_info }}</a></li>
-                    <li><a href="#tab-markup" data-toggle="tab">{{ tab_markup }}</a></li>
+                    <li class="active"><a href="#tab-markup" data-toggle="tab">{{ tab_markup }}</a></li>
                 </ul>
 
                 <div class="tab-content">
 
-                    <div class="tab-pane active" id="tab-general">
+                    <div class="tab-pane" id="tab-general">
                     </div>
 
                     <div class="tab-pane" id="tab-info">
@@ -83,12 +83,20 @@
                         </form>
                     </div>
 
-                    <div class="tab-pane" id="tab-markup">
+                    <div class="tab-pane active" id="tab-markup">
 
                         <script>
-                            let tree = [
+                            let tree1 = [
                                 {
-                                    text: "Parent 1",
+                                    text: "<div class='catline form-inline'><span>Parent 1</span>"+
+                                    "<div class=\"input-group\">\n" +
+                                            "<div class=\"input-group-addon input-sm\">%</div>" +
+                                        "      <input type=\"text\" class=\"form-control input-sm\" placeholder=\"Search for...\">\n" +
+                                        "      <span class=\"input-group-btn\">\n" +
+                                        "        <button class=\"btn btn-success btn-sm\" type=\"button\">Go!</button>\n" +
+                                        "        <button class=\"btn btn-danger btn-sm\" type=\"button\">West</button>\n" +
+                                        "      </span>\n" +
+                                        "    </div>",
                                     tags: ['0'],
                                     nodes: [
                                         {
@@ -106,7 +114,7 @@
                                             ]
                                         },
                                         {
-                                            text: "Child 2",
+                                            text: "Child 2 <button class='btn btn-xs'>OK</button>",
                                             tags: ['0']
                                         }
                                     ]
@@ -127,14 +135,36 @@
                                 }
                             ];
 
+                            let tree = {{ categories }}
+
                             $(document).ready(function() {
-                                $('#tree').treeview({data: tree, showTags: true});
+                                $('#tree').treeview({
+                                    data: tree,
+                                    showTags: true,
+                                    checkedIcon: 'fa fa-check-square',
+                                    uncheckedIcon: 'fa fa-square',
+                                    showCheckbox: true,
+                                    multiSelect: true
+                                });
                             });
 
                         </script>
 
 
                         <div id="tree"></div>
+
+                        <div>Group operations under checkboxed items - set markup</div>
+                        <div> Search and select items! right panel</div>
+                        <div>Добавлять выделенные в специальные группы! выбирать из списка</div>
+                        <div>Вкладка по созданию групп категорий</div>
+                        <div>Выделит группу манипулировать ей</div>
+                        <div>Переносы из различных категорий</div>
+                        <div>Если будут разные источники, нужен идентификатор источника с его ИД, а тут юзать собственный ИД</div>
+                        выдавать все категории, и выстраивать их в дерево
+                        изменять одну категорию
+                        изменять категорию и дочерние
+
+                        сделать дерево с табличной шапкой, с пояснениями. Количество товаров?
 
 
                     </div>

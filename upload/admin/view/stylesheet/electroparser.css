@@ -1,0 +1,30 @@
+.list-group-item {
+    display: flex !important;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.list-group-item .badge {
+    justify-content: flex-end;
+    margin-left: 10px;
+}
+
+.treeview span.node-icon {
+    width: 0px !important;
+}
+
+.catline {
+    flex-grow: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+}
+
+.catline .input-group {
+    float: right;
+}
+
+.catline .input-group input {
+    max-width: 50px;
+}
