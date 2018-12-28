@@ -16,6 +16,10 @@ class ControllerExtensionDashboardElectroparser extends Controller {
 
         // устанавливаем заголовок
         $this->document->setTitle($this->language->get('heading_title'));
+        $this->document->addScript('view/javascript/electroparser/bootstrap-treeview.min.js');
+        $this->document->addStyle('view/javascript/electroparser/bootstrap-treeview.min.css');
+        $this->document->addScript('view/javascript/electroparser/electroparser.js');
+        $this->document->addStyle('view/stylesheet/electroparser.css');
 
         // загружаем модель параметров
         $this->load->model('setting/setting');
@@ -86,12 +90,65 @@ class ControllerExtensionDashboardElectroparser extends Controller {
             $data['dashboard_electroparser_markup'] = $this->config->get('dashboard_electroparser_markup');
         }
 
+        // загружаем модель парсера
+        $this->load->model('extension/dashboard/electroparser');
+        $cats = $this->model_extension_dashboard_electroparser->loadAllCategories();
+
+        $categories = $this->form_tree($cats);
+        //преобразовать в соответствии с деревом
+        $data['categories'] = json_encode($this->build_tree($categories, 0, ""), JSON_UNESCAPED_UNICODE);
+
+
         $data['header'] = $this->load->controller('common/header');
         $data['column_left'] = $this->load->controller('common/column_left');
         $data['footer'] = $this->load->controller('common/footer');
 
         $this->response->setOutput($this->load->view('extension/dashboard/electroparser_form', $data));
     }
+
+    private function form_tree($mess)
+    {
+        if (!is_array($mess)) {
+            return false;
+        }
+        $tree = array();
+        foreach ($mess as $value) {
+            $tree[$value['parent_id']][] = $value;
+        }
+        return $tree;
+    }
+
+    //$parent_id - какой parentid считать корневым
+    //по умолчанию 0 (корень)
+    private function build_tree($cats, $parent_id, $pathy)
+    {
+        if (is_array($cats) && isset($cats[$parent_id])) {
+            $tree = array();
+            foreach ($cats[$parent_id] as $cat) {
+
+                $line = '<div class="catline form-inline"><span>'.$cat['name'].'</span>'.
+                    '<div class="input-group">'.
+                    '<div class="input-group-addon input-sm">%</div>'.
+                    '      <input type="text" class="form-control input-sm" placeholder="0">'.
+                    '      <span class="input-group-btn">'.
+                    '        <button class="btn btn-success btn-sm" type="button">OK</button>'.
+                    '        <button class="btn btn-danger btn-sm" type="button">Children</button>'.
+                    '      </span></div>';
+
+                $tree[] = array(
+                    'category_id' => $cat['category_id'],
+                    'text'        => $line,
+                    'tags'        => ["0"],
+                    'href'        => $this->url->link('product/category', 'path=' . ($pathy <> "" ? $pathy."_" : "") . $cat['category_id']),
+                    'nodes'    => $this->build_tree($cats, $cat['category_id'], ($pathy <> "" ? $pathy."_" : "").$cat['category_id'])
+                );
+            }
+        } else {
+            return false;
+        }
+        return $tree;
+    }
+
 
     protected function validate() {
         // проверка уровня доступа
