@@ -21,11 +21,26 @@ class ControllerExtensionDashboardElectroparser extends Controller {
         $this->document->addScript('view/javascript/electroparser/electroparser.js');
         $this->document->addStyle('view/stylesheet/electroparser.css');
 
+        $this->document->addScript('https://cdnjs.cloudflare.com/ajax/libs/gijgo/1.9.11/combined/js/gijgo.min.js');
+        $this->document->addStyle('https://cdnjs.cloudflare.com/ajax/libs/gijgo/1.9.11/combined/css/gijgo.min.css');
+
+
         // загружаем модель параметров
         $this->load->model('setting/setting');
 
+        // загружаем модель парсера
+        $this->load->model('extension/dashboard/electroparser');
+
         // если это сохранение настроек, то сохраняем и возвращаемся в раздел маркета
         if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validate()) {
+
+            // Сохраняем наценки в БД
+            //print_r($this->request->post);
+            $result = $this->model_extension_dashboard_electroparser->saveAllCategories($this->request->post['dashboard_electroparser_markups']);
+            if (!$result) {
+                // Проблемы при записи
+            }
+
             $this->model_setting_setting->editSetting('dashboard_electroparser', $this->request->post);
             $this->session->data['success'] = $this->language->get('text_success');
             $this->response->redirect($this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=dashboard', true));
@@ -90,8 +105,7 @@ class ControllerExtensionDashboardElectroparser extends Controller {
             $data['dashboard_electroparser_markup'] = $this->config->get('dashboard_electroparser_markup');
         }
 
-        // загружаем модель парсера
-        $this->load->model('extension/dashboard/electroparser');
+        // Получаем все категории товаров
         $cats = $this->model_extension_dashboard_electroparser->loadAllCategories();
 
         $categories = $this->form_tree($cats);
@@ -129,7 +143,9 @@ class ControllerExtensionDashboardElectroparser extends Controller {
                 $line = '<div class="catline form-inline"><span>'.$cat['name'].'</span>'.
                     '<div class="input-group">'.
                     '<div class="input-group-addon input-sm">%</div>'.
-                    '      <input type="text" class="form-control input-sm" placeholder="0">'.
+                    '      <input type="text" class="form-control input-sm" '.
+                    'name="dashboard_electroparser_markups['.$cat['category_id'].']" '.
+                    'value="'.$cat['markup'].'" placeholder="0" id="markup_'.$cat['category_id'].'">'.
                     '      <span class="input-group-btn">'.
                     '        <button class="btn btn-success btn-sm" type="button">OK</button>'.
                     '        <button class="btn btn-danger btn-sm" type="button">Children</button>'.

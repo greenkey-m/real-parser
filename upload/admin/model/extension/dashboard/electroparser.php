@@ -29,10 +29,39 @@ class ModelExtensionDashboardElectroparser extends Model {
         return $query->rows;
     }
 
-    public function changeCategory ($category, $withChidren = false) {
-        // если присутствует то обновляем
-        $this->db->query("UPDATE `re_category_markup` SET `markup`=10,`status`=1,`date_added`=now(),`date_modified`=now() WHERE `category_id`=1");
-        // иначе вставляем
+    public function saveAllCategories($cats) {
+        // Очищаем таблицу со скидками
+        $q = "TRUNCATE TABLE " . DB_PREFIX . "category_markup";
+        if (!$this->db->query($q)) {
+            // Что делать если не удалось очистить
+            return false;
+        } else {
+            // Записываем полученные из формы данные
+            foreach ($cats as $cat_id => $markup) {
+                if (!$markup) $markup = 0;
+                $q = "INSERT INTO `" . DB_PREFIX . "category_markup` (`category_id`, `markup`,`status`,`date_added`,`date_modified`) ".
+                    "VALUES (".$cat_id.", ".$markup.", 1, now(), now())";
+                if (!$this->db->query($q)) {
+                    return false;
+                }
+            }
+            return true;
+        }
 
+    }
+
+    public function changeCategory ($category, $withChidren = false) {
+        // проверить существует ли такая категория вообще
+        // если присутствует наценка то обновляем
+        $result = $this->db->query("SELECT * FROM `" . DB_PREFIX . "category_markup` WHERE `category_id`=".$category['category_id']);
+        if (!$result) {
+            // такой наценки нет
+            $this->db->query("INSERT INTO `" . DB_PREFIX . "category_markup` SET `markup`=".$category['markup'].
+                ",`status`=1,`date_added`=now(),`date_modified`=now() WHERE `category_id`=".$category['category_id']);
+        } else {
+            // наценка есть, обновляем
+            $this->db->query("UPDATE `" . DB_PREFIX . "category_markup` SET `markup`=10,`status`=1,`date_added`=now(),`date_modified`=now() WHERE `category_id`=1");
+        }
+        // TODO проверить работу, еще - как записать дочерние?
     }
 }

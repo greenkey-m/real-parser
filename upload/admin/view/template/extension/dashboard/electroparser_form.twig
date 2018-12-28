@@ -3,8 +3,11 @@
     <div class="page-header">
         <div class="container-fluid">
             <div class="pull-right">
-                <button type="submit" form="form-dashboard" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa fa-save"></i></button>
-                <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i class="fa fa-reply"></i></a></div>
+                <button id="savemarkups" type="submit" form="form-dashboard" data-toggle="tooltip"
+                        title="{{ button_save }}"
+                        class="btn btn-primary"><i class="fa fa-save"></i></button>
+                <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i
+                            class="fa fa-reply"></i></a></div>
             <h1>{{ heading_title }}</h1>
             <ul class="breadcrumb">
                 {% for breadcrumb in breadcrumbs %}
@@ -15,7 +18,8 @@
     </div>
     <div class="container-fluid">
         {% if error_warning %}
-            <div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> {{ error_warning }}
+            <div class="alert alert-danger alert-dismissible"><i
+                        class="fa fa-exclamation-circle"></i> {{ error_warning }}
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
             </div>
         {% endif %}
@@ -25,19 +29,21 @@
             </div>
             <div class="panel-body">
 
-                <ul class="nav nav-tabs">
-                    <li><a href="#tab-general" data-toggle="tab">{{ tab_general }}</a></li>
-                    <li><a href="#tab-info" data-toggle="tab">{{ tab_info }}</a></li>
-                    <li class="active"><a href="#tab-markup" data-toggle="tab">{{ tab_markup }}</a></li>
-                </ul>
+                <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-dashboard"
+                      class="form-horizontal">
 
-                <div class="tab-content">
+                    <ul class="nav nav-tabs">
+                        <li><a href="#tab-general" data-toggle="tab">{{ tab_general }}</a></li>
+                        <li><a href="#tab-info" data-toggle="tab">{{ tab_info }}</a></li>
+                        <li class="active"><a href="#tab-markup" data-toggle="tab">{{ tab_markup }}</a></li>
+                    </ul>
 
-                    <div class="tab-pane" id="tab-general">
-                    </div>
+                    <div class="tab-content">
 
-                    <div class="tab-pane" id="tab-info">
-                        <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-dashboard" class="form-horizontal">
+                        <div class="tab-pane" id="tab-general">
+                        </div>
+
+                        <div class="tab-pane" id="tab-info">
 
                             <div class="form-group">
                                 <label class="col-sm-2 control-label" for="input-width">{{ entry_width }}</label>
@@ -57,7 +63,8 @@
                             <div class="form-group">
                                 <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
                                 <div class="col-sm-10">
-                                    <select name="dashboard_electroparser_status" id="input-status" class="form-control">
+                                    <select name="dashboard_electroparser_status" id="input-status"
+                                            class="form-control">
                                         {% if dashboard_electroparser_status %}
                                             <option value="1" selected="selected">{{ text_enabled }}</option>
                                             <option value="0">{{ text_disabled }}</option>
@@ -69,107 +76,65 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-sm-2 control-label" for="input-sort-order">{{ entry_sort_order }}</label>
+                                <label class="col-sm-2 control-label"
+                                       for="input-sort-order">{{ entry_sort_order }}</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="dashboard_electroparser_sort_order" value="{{ dashboard_electroparser_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control" />
+                                    <input type="text" name="dashboard_electroparser_sort_order"
+                                           value="{{ dashboard_electroparser_sort_order }}"
+                                           placeholder="{{ entry_sort_order }}" id="input-sort-order"
+                                           class="form-control"/>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-2 control-label" for="input-sort-order">Markup</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="dashboard_electroparser_markup" value="{{ dashboard_electroparser_markup }}" placeholder="{{ entry_markup }}" id="input-markup" class="form-control" />
+                                    <input type="text" name="dashboard_electroparser_markup"
+                                           value="{{ dashboard_electroparser_markup }}" placeholder="{{ entry_markup }}"
+                                           id="input-markup" class="form-control"/>
                                 </div>
                             </div>
-                        </form>
-                    </div>
+                        </div>
 
-                    <div class="tab-pane active" id="tab-markup">
+                        <div class="tab-pane active" id="tab-markup">
 
-                        <script>
-                            let tree1 = [
-                                {
-                                    text: "<div class='catline form-inline'><span>Parent 1</span>"+
-                                    "<div class=\"input-group\">\n" +
-                                            "<div class=\"input-group-addon input-sm\">%</div>" +
-                                        "      <input type=\"text\" class=\"form-control input-sm\" placeholder=\"Search for...\">\n" +
-                                        "      <span class=\"input-group-btn\">\n" +
-                                        "        <button class=\"btn btn-success btn-sm\" type=\"button\">Go!</button>\n" +
-                                        "        <button class=\"btn btn-danger btn-sm\" type=\"button\">West</button>\n" +
-                                        "      </span>\n" +
-                                        "    </div>",
-                                    tags: ['0'],
-                                    nodes: [
-                                        {
-                                            text: "Child 1",
-                                            tags: ['0'],
-                                            nodes: [
-                                                {
-                                                    text: "Grandchild 1",
-                                                    tags: ['0']
-                                                },
-                                                {
-                                                    text: "Grandchild 2",
-                                                    tags: ['0']
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            text: "Child 2 <button class='btn btn-xs'>OK</button>",
-                                            tags: ['0']
-                                        }
-                                    ]
-                                },
-                                {
-                                    text: "Parent 2",
-                                    tags: ['0']
-                                },
-                                {
-                                    text: "Parent 3",
-                                    tags: ['0']
-                                },
-                                {
-                                    text: "Parent 4 <button>click</button>"
-                                },
-                                {
-                                    text: "Parent 5"
-                                }
-                            ];
-
-                            let tree = {{ categories }}
-
-                            $(document).ready(function() {
-                                $('#tree').treeview({
-                                    data: tree,
-                                    showTags: true,
-                                    checkedIcon: 'fa fa-check-square',
-                                    uncheckedIcon: 'fa fa-square',
-                                    showCheckbox: true,
-                                    multiSelect: true
+                            <script>
+                                $(document).ready(function () {
+                                    let tree = {{ categories }};
+                                    $('#tree').treeview({
+                                        data: tree,
+                                        showTags: true,
+                                        checkedIcon: 'fa fa-check-square',
+                                        uncheckedIcon: 'fa fa-square',
+                                        showCheckbox: true,
+                                        highlightSelected: false
+                                    });
                                 });
-                            });
-
-                        </script>
+                            </script>
 
 
-                        <div id="tree"></div>
+                            <div id="tree"></div>
 
-                        <div>Group operations under checkboxed items - set markup</div>
-                        <div> Search and select items! right panel</div>
-                        <div>Добавлять выделенные в специальные группы! выбирать из списка</div>
-                        <div>Вкладка по созданию групп категорий</div>
-                        <div>Выделит группу манипулировать ей</div>
-                        <div>Переносы из различных категорий</div>
-                        <div>Если будут разные источники, нужен идентификатор источника с его ИД, а тут юзать собственный ИД</div>
-                        выдавать все категории, и выстраивать их в дерево
-                        изменять одну категорию
-                        изменять категорию и дочерние
+                            <div>Group operations under checkboxed items - set markup</div>
+                            <div> Search and select items! right panel</div>
+                            <div>Добавлять выделенные в специальные группы! выбирать из списка</div>
+                            <div>Вкладка по созданию групп категорий</div>
+                            <div>Выделит группу манипулировать ей</div>
+                            <div>Переносы из различных категорий</div>
+                            <div>Если будут разные источники, нужен идентификатор источника с его ИД, а тут юзать
+                                собственный ИД
+                            </div>
+                            выдавать все категории, и выстраивать их в дерево
+                            изменять одну категорию
+                            изменять категорию и дочерние
 
-                        сделать дерево с табличной шапкой, с пояснениями. Количество товаров?
+                            сделать дерево с табличной шапкой, с пояснениями. Количество товаров?
 
+
+                        </div>
 
                     </div>
 
-                </div>
+                </form>
 
             </div>
         </div>

@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/greenkey-m/opencart-3-hello-world/issues"
   },
-  "homepage": "https://github.com/greenkey-m/opencart-3-hello-world#readme"
+  "homepage": "https://github.com/greenkey-m/opencart-3-hello-world#readme",
+  "dependencies": {
+    "@kanety/jquery-simple-tree-table": "^0.2.0",
+    "gijgo": "^1.9.11",
+    "jquery-treetable": "^3.2.0-1",
+    "patternfly-bootstrap-treeview": "^2.1.8"
+  }
 }
