@@ -97,22 +97,79 @@
 
                         <div class="tab-pane active" id="tab-markup">
 
+                            <div id="app">
+                                <div class="custom-tree-container">
+                                    <div class="block">
+                                        <el-tree :data="data5" show-checkbox="" node-key="id"
+                                                 :expand-on-click-node="false">
+
+                                        </el-tree>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <style>
+                                .custom-tree-node {
+                                    flex: 1;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: space-between;
+                                    font-size: 14px;
+                                    padding-right: 8px;
+                                }
+
+                                .el-tree-node__content {
+                                    height: 55px !important;
+                                }
+                                .cat-name {
+                                    flex-grow: 10;
+                                    padding: 0 10px;
+                                }
+                            </style>
+
                             <script>
                                 $(document).ready(function () {
-                                    let tree = {{ categories }};
-                                    $('#tree').treeview({
-                                        data: tree,
-                                        showTags: true,
-                                        checkedIcon: 'fa fa-check-square',
-                                        uncheckedIcon: 'fa fa-square',
-                                        showCheckbox: true,
-                                        highlightSelected: false
-                                    });
+
+                                    let id = 1000;
+
+                                    var Main = {
+                                        data() {
+                                            const data = {{ categories }};
+                                            return {
+                                                data4: JSON.parse(JSON.stringify(data)),
+                                                data5: JSON.parse(JSON.stringify(data))
+                                            }
+                                        },
+
+                                        methods: {
+                                            append(data) {
+                                                const newChild = {id: id++, label: 'testtest', children: []};
+                                                if (!data.children) {
+                                                    this.$set(data, 'children', []);
+                                                }
+                                                data.children.push(newChild);
+
+                                            },
+
+                                            remove(node, data) {
+                                                const parent = node.parent;
+                                                const children = parent.data.children || parent.data;
+                                                const index = children.findIndex(d => d.id === data.id);
+                                                children.splice(index, 1);
+                                            },
+                                            renderContent(h, { node, data, store }) {
+                                                return h('span', null, [h('span', null, node.id)]);
+                                            }
+
+                                        }
+                                    };
+                                    var Ctor = Vue.extend(Main)
+                                    new Ctor().$mount('#app')
+
                                 });
+
                             </script>
 
-
-                            <div id="tree"></div>
 
                             <div>Group operations under checkboxed items - set markup</div>
                             <div> Search and select items! right panel</div>
@@ -128,6 +185,21 @@
                             изменять категорию и дочерние
 
                             сделать дерево с табличной шапкой, с пояснениями. Количество товаров?
+
+                            <div id="my_view">
+                            </div>
+
+                            <script>
+                                var myModel = {
+                                    name: "Ashley",
+                                    age: 24
+                                };
+
+                                var myViewModel = new Vue({
+                                    el: '#my_view',
+                                    data: myModel
+                                });
+                            </script>
 
 
                         </div>

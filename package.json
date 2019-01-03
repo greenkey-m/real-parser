@@ -20,6 +20,9 @@
     "@kanety/jquery-simple-tree-table": "^0.2.0",
     "gijgo": "^1.9.11",
     "jquery-treetable": "^3.2.0-1",
-    "patternfly-bootstrap-treeview": "^2.1.8"
+    "patternfly-bootstrap-treeview": "^2.1.8",
+    "vue-ads-table-tree": "^1.2.5",
+    "vue-draggable-nested-tree": "^2.2.2",
+    "vue-table-with-tree-grid": "^0.2.4"
   }
 }

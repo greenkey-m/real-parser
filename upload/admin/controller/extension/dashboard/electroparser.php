@@ -21,9 +21,9 @@ class ControllerExtensionDashboardElectroparser extends Controller {
         $this->document->addScript('view/javascript/electroparser/electroparser.js');
         $this->document->addStyle('view/stylesheet/electroparser.css');
 
-        $this->document->addScript('https://cdnjs.cloudflare.com/ajax/libs/gijgo/1.9.11/combined/js/gijgo.min.js');
-        $this->document->addStyle('https://cdnjs.cloudflare.com/ajax/libs/gijgo/1.9.11/combined/css/gijgo.min.css');
-
+        $this->document->addScript('https://unpkg.com/vue/dist/vue.js');
+        $this->document->addScript('https://unpkg.com/element-ui/lib/index.js');
+        $this->document->addStyle('https://unpkg.com/element-ui/lib/theme-chalk/index.css');
 
         // загружаем модель параметров
         $this->load->model('setting/setting');
@@ -152,11 +152,13 @@ class ControllerExtensionDashboardElectroparser extends Controller {
                     '      </span></div>';
 
                 $tree[] = array(
-                    'category_id' => $cat['category_id'],
-                    'text'        => $line,
+                    'id' => $cat['category_id'],
+                    'label'       => $cat['name'],
+                    'markup'      => $cat['markup'],
+                    'ref'      => $cat['markup'],
                     'tags'        => ["0"],
                     'href'        => $this->url->link('product/category', 'path=' . ($pathy <> "" ? $pathy."_" : "") . $cat['category_id']),
-                    'nodes'    => $this->build_tree($cats, $cat['category_id'], ($pathy <> "" ? $pathy."_" : "").$cat['category_id'])
+                    'children'    => $this->build_tree($cats, $cat['category_id'], ($pathy <> "" ? $pathy."_" : "").$cat['category_id'])
                 );
             }
         } else {
