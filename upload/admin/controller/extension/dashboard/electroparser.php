@@ -155,7 +155,8 @@ class ControllerExtensionDashboardElectroparser extends Controller {
                     'id' => $cat['category_id'],
                     'label'       => $cat['name'],
                     'markup'      => $cat['markup'],
-                    'ref'      => $cat['markup'],
+                    'ref'         => $cat['markup'],
+                    'input'       => 'dashboard_electroparser_markups['.$cat['category_id'].']',
                     'tags'        => ["0"],
                     'href'        => $this->url->link('product/category', 'path=' . ($pathy <> "" ? $pathy."_" : "") . $cat['category_id']),
                     'children'    => $this->build_tree($cats, $cat['category_id'], ($pathy <> "" ? $pathy."_" : "").$cat['category_id'])

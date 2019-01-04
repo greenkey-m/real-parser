@@ -102,8 +102,33 @@
                                     <div class="block">
                                         <el-tree :data="data5" show-checkbox="" node-key="id"
                                                  :expand-on-click-node="false">
+                                            <span class="custom-tree-node" slot-scope="{ node, data }">
+                                                <span>
+                                                   <el-input
+                                                           v-model="node.label"
+                                                           size="small"
+                                                           :ref="'node'+ node.id"
+                                                   ></el-input>
+                                                </span>
+
+                                                <span>
+                                                    <el-input
+                                                            placeholder="Please input"
+                                                            v-model="data.markup"
+                                                            size="small"
+                                                            v-bind:name="data.input"
+                                                    >
+                                                        <template slot="prepend">%</template>
+                                                        <el-button slot="append" type="primary">OK</el-button>
+                                                    </el-input>
+                                                </span>
+
+                                            </span>
 
                                         </el-tree>
+
+                                        {#:render-content="renderContent"#}
+
                                     </div>
                                 </div>
                             </div>
@@ -158,7 +183,7 @@
                                                 children.splice(index, 1);
                                             },
                                             renderContent(h, { node, data, store }) {
-                                                return h('span', null, [h('span', null, node.id)]);
+                                                return h('span', null, [h('span', null, data.markup)]);
                                             }
 
                                         }
