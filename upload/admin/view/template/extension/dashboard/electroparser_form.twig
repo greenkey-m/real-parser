@@ -103,7 +103,7 @@
                                         <el-tree :data="data5" show-checkbox="" node-key="id"
                                                  :expand-on-click-node="false">
                                             <span class="custom-tree-node" slot-scope="{ node, data }">
-                                                <span>
+                                                <span class="catname">
                                                    <el-input
                                                            v-model="node.label"
                                                            size="small"
@@ -111,15 +111,16 @@
                                                    ></el-input>
                                                 </span>
 
-                                                <span>
+                                                <span class="catmarkup">
                                                     <el-input
                                                             placeholder="Please input"
                                                             v-model="data.markup"
                                                             size="small"
                                                             v-bind:name="data.input"
+                                                            v-bind:class="markup"
                                                     >
                                                         <template slot="prepend">%</template>
-                                                        <el-button slot="append" type="primary">OK</el-button>
+                                                        <el-button slot="append" icon="el-icon-circle-check-outline"></el-button>
                                                     </el-input>
                                                 </span>
 

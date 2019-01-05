@@ -13,18 +13,21 @@
     width: 0px !important;
 }
 
-.catline {
+.catname {
     flex-grow: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    margin-right: 10px;
 
 }
 
-.catline .input-group {
-    float: right;
+.catmarkup input {
+    max-width: 35px;
+    text-align: right;
 }
 
-.catline .input-group input {
-    max-width: 50px;
+.custom-tree-node input, .custom-tree-node .el-input-group__append, .custom-tree-node .el-input-group__prepend {
+    padding: 0 5px;
+}
+
+.el-tree-node__content > .el-checkbox {
+    margin-right: 0 !important;
 }
