@@ -102,11 +102,12 @@
                                 <div class="custom-tree-container">
                                     <div class="block">
                                         <el-tree
-                                                :data="data5"
+                                                :data="data"
                                                 show-checkbox=""
                                                 node-key="id"
                                                 :expand-on-click-node="false"
                                                 ref="markupTree"
+                                                @node-click="handleNodeClick"
                                         >
                                             <span class="custom-tree-node" slot-scope="{ node, data }">
                                                 <span class="catname">
@@ -127,12 +128,12 @@
                                                         <template slot="append">%</template>
                                                     </el-input>
                                                 </span>
-                                                    <el-button
-                                                            icon="el-icon-check"
-                                                            type="primary"
-                                                            size="small"
-                                                            v-on:click="applySelected(node.id)"
-                                                    ></el-button>
+                                                <el-button
+                                                        icon="el-icon-check"
+                                                        type="primary"
+                                                        size="small"
+                                                        v-on:click="applySelected(data.id)"
+                                                ></el-button>
                                             </span>
 
                                         </el-tree>
@@ -169,10 +170,8 @@
 
                                     var Main = {
                                         data() {
-                                            const data = {{ categories }};
                                             return {
-                                                data4: JSON.parse(JSON.stringify(data)),
-                                                data5: JSON.parse(JSON.stringify(data))
+                                                data: {{ categories }}
                                             }
                                         },
 
@@ -195,9 +194,14 @@
                                             renderContent(h, { node, data, store }) {
                                                 return h('span', null, [h('span', null, data.markup)]);
                                             },
+                                            handleNodeClick(data) {
+                                                //console.log(data.markup);
+                                            },
                                             applySelected(nodeid) {
-                                                console.log(this.data5[nodeid].markup);
-                                                console.log(this.$refs.markupTree.getCheckedNodes());
+                                                console.log(nodeid);
+                                                //console.log(this.$refs.markupTree.getNode(nodeid));
+                                                console.log(this.$refs.markupTree.getNode(nodeid).data.markup);
+                                                //console.log(this.$refs.markupTree.getCheckedNodes());
                                             },
                                             getCheckedNodes() {
                                                 console.log(this.$refs.markupTree.getCheckedNodes());
