@@ -13,10 +13,12 @@
     width: 0px !important;
 }
 
+.custom-tree-node > span {
+    margin-right: 10px;
+}
+
 .catname {
     flex-grow: 10;
-    margin-right: 10px;
-
 }
 
 .catmarkup input {
