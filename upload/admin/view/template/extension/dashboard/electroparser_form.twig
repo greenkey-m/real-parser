@@ -98,13 +98,16 @@
                         <div class="tab-pane active" id="tab-markup">
 
                             <div id="app">
-                                <el-button @click="getCheckedNodes">get by node</el-button>
+                                <el-button @click="getCheckedNodes">Dev: checked</el-button>
+                                <el-button @click="getCheckedNodes" type="primary" disabled>Expand All</el-button>
+                                <el-button @click="getCheckedNodes" type="primary" plain disabled>Collapse All</el-button>
                                 <div class="custom-tree-container">
                                     <div class="block">
                                         <el-tree
                                                 :data="data"
                                                 show-checkbox=""
                                                 node-key="id"
+                                                :render-after-expand="false"
                                                 :expand-on-click-node="false"
                                                 ref="markupTree"
                                                 @node-click="handleNodeClick"
@@ -114,6 +117,7 @@
                                                    <el-input
                                                            v-model="node.label"
                                                            size="small"
+                                                           readonly
                                                            :ref="'node'+ node.id"
                                                    ></el-input>
                                                 </span>
@@ -132,7 +136,7 @@
                                                         icon="el-icon-check"
                                                         type="primary"
                                                         size="small"
-                                                        v-on:click="applySelected(data.id)"
+                                                        v-on:click="applySelected(data)"
                                                 ></el-button>
                                             </span>
 
@@ -197,11 +201,16 @@
                                             handleNodeClick(data) {
                                                 //console.log(data.markup);
                                             },
-                                            applySelected(nodeid) {
-                                                console.log(nodeid);
-                                                //console.log(this.$refs.markupTree.getNode(nodeid));
-                                                console.log(this.$refs.markupTree.getNode(nodeid).data.markup);
-                                                //console.log(this.$refs.markupTree.getCheckedNodes());
+                                            applySelected(nodeDataObj) {
+                                                //console.log(nodeid);
+                                                //let markup = this.$refs.markupTree.getNode(nodeid).data.markup;
+                                                let markup = nodeDataObj.markup;
+                                                console.log(markup);
+                                                let checked = this.$refs.markupTree.getCheckedNodes();
+                                                checked.forEach(function(item, i, arr) {
+                                                    item.markup = markup;
+                                                });
+                                                console.log(checked);
                                             },
                                             getCheckedNodes() {
                                                 console.log(this.$refs.markupTree.getCheckedNodes());
