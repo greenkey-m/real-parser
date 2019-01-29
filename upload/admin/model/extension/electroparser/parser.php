@@ -91,6 +91,16 @@ try {
     // проверка по дате лога
     // в целом, запуск скрипта осуществляется по cron
 
+    // Проверяем дату последней загрузки файла.
+    // Если дата последней загрузки менее чем 3 часа? или 24 часа
+    // То файл загружать не будем
+
+    $filedate = filectime ( 'market_filial_new.yml.xml' );
+    $datetime1 = new DateTime($filedate);
+    $datetime2 = new DateTime(date());
+    $interval = $datetime1->diff($datetime2);
+    $hours = $interval->format('%h');
+
     // загрузка файла из electrozon.ru
     if (!copy(ELECTROZON_PATH, 'market_filial_new.yml.xml'))
         throw new Exception('File ' . ELECTROZON_PATH . ' with goods from electozon.ru not availiable.');
@@ -260,7 +270,7 @@ try {
             }
         }
 
-        // Делаем записть в таблицу с магазинами
+        // Делаем записать в таблицу с магазинами
         // TODO тут надо будет определять, в какой магаз записывать
         $q = "INSERT INTO " . DB_PREFIX . "category_to_store(category_id, store_id) VALUES " .
             "($category_id, 0)";
@@ -378,6 +388,10 @@ try {
         $price = (int)round($price * (1 + $markup / 100));
         // Если вдруг цена не указана (в файле такое встречается)
         if (!$price) $price = 0;
+        // Для цены меньше 1000 округляем до десятков, в большую сторону
+        if ($price < 1000) {
+            $price = ceil($price/10) * 10;
+        }
 
         // проверить, есть ли основное изображение
         $picnodes = $prod->getElementsByTagName('picture');
