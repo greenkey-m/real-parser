@@ -95,15 +95,26 @@ try {
     // Если дата последней загрузки менее чем 3 часа? или 24 часа
     // То файл загружать не будем
 
-    $filedate = filectime ( 'market_filial_new.yml.xml' );
-    $datetime1 = new DateTime($filedate);
-    $datetime2 = new DateTime(date());
-    $interval = $datetime1->diff($datetime2);
-    $hours = $interval->format('%h');
+    $hours = 24;
+    if (file_exists('market_filial_new.yml.xml')) {
+        $filedate = filectime ( 'market_filial_new.yml.xml' );
+        $datetime1 = new DateTime();
+        $datetime1->setTimestamp ( $filedate );
+        $datetime2 = new DateTime();
+        $interval = $datetime2->diff($datetime1, true);
+        $hours = $interval->h;
+        $hours = $hours + ($interval->days*24);
+    }
 
-    // загрузка файла из electrozon.ru
-    if (!copy(ELECTROZON_PATH, 'market_filial_new.yml.xml'))
-        throw new Exception('File ' . ELECTROZON_PATH . ' with goods from electozon.ru not availiable.');
+    // Если прошло более 3 часов, либо если файла нет (24), то загружаем его
+    if ($hours > 3) {
+        // загрузка файла из electrozon.ru
+        if (!copy(ELECTROZON_PATH, 'market_filial_new.yml.xml'))
+            throw new Exception('File ' . ELECTROZON_PATH . ' with goods from electozon.ru not availiable.');
+        // задерживаем выполнение на 30 секунд, т.к. сервер бывает задерживает запись файла, и тогда далее будут сбои при чтении
+        sleep(30);
+        fwrite($logfile, "EXPORT FILE market_filial_new.yml.xml too old or not exist ($hours hours), upload from site. " . "\n");
+    }
 
     // Загружаем DOM из файла
     $doc = new DOMDocument();
@@ -124,10 +135,19 @@ try {
 
     // подключение к БД магазина
     $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+    $i = 1;
+    // Переподключаемся к БД, пробудем 10 раз
+    while ($mysqli->connect_errno) {
+        sleep(10);
+        $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+        $i++;
+        if ($i > 10) break;
+    }
+    // Если сервер БД так и не ответил, выкидываем исключение и завершаем
     if ($mysqli->connect_errno) {
         throw new Exception('Cannot connect to MySQL DB: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
     }
-    echo $mysqli->host_info . "<br/>\n";
+    echo $mysqli->host_info . " - category<br/>\n";
 
     // Получаем установленный язык для магазина (из настроек) и таблицы
     $q = "SELECT language_id FROM " . DB_PREFIX . "language WHERE `code`=(SELECT `value` FROM " . DB_PREFIX . "setting WHERE `key`='config_language')";
@@ -333,6 +353,25 @@ try {
         echo "Cannot clear deleted category: (" . $mysqli->errno . ") " . $mysqli->error;
     }
 
+    $mysqli->close();
+
+    // переподключение к БД магазина
+    $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+    $i = 1;
+    // Переподключаемся к БД, пробудем 10 раз
+    while ($mysqli->connect_errno) {
+        sleep(10);
+        $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+        $i++;
+        if ($i > 10) break;
+    }
+    // Если сервер БД так и не ответил, выкидываем исключение и завершаем
+    if ($mysqli->connect_errno) {
+        throw new Exception('Cannot connect to MySQL DB: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+    }
+    echo $mysqli->host_info . " - products<br/>\n";
+
+
     // TODO лучше всего установить параметр в админке, который будет определять, что с ними (категориями) делать:
     // удалять, деактивировать, сохранять как было, если их нет в обновлении
 
@@ -372,8 +411,33 @@ try {
     foreach ($prods as $prod) {
 
         // Для тестирования. прерывает выполнение парсера.
-        //$counter++;
+        $counter++;
         //if ($counter > 100) break;
+
+        if($counter % 1000 == 0) {
+
+            $mysqli->close();
+
+            sleep(10);
+
+            // переподключение к БД магазина на каждую 1000 единиц товара
+            $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+            $i = 1;
+            // Переподключаемся к БД, пробудем 10 раз
+            while ($mysqli->connect_errno) {
+                sleep(10);
+                $mysqli = new mysqli("localhost", DB_USERNAME, DB_PASSWORD, DB_DATABASE);
+                $i++;
+                if ($i > 10) break;
+            }
+            // Если сервер БД так и не ответил, выкидываем исключение и завершаем
+            if ($mysqli->connect_errno) {
+                throw new Exception('Cannot connect to MySQL DB: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+            }
+            echo $mysqli->host_info . " - products $counter<br/>\n";
+
+
+        }
 
         $product_id = $prod->getAttribute('id');                                        // product_id
         $available = $prod->getAttribute('available');                                  // доступность, true, false
@@ -388,10 +452,8 @@ try {
         $price = (int)round($price * (1 + $markup / 100));
         // Если вдруг цена не указана (в файле такое встречается)
         if (!$price) $price = 0;
-        // Для цены меньше 1000 округляем до десятков, в большую сторону
-        if ($price < 1000) {
-            $price = ceil($price/10) * 10;
-        }
+        // Округляем все цены до десятков в большую сторону
+        $price = ceil($price/10) * 10;
 
         // проверить, есть ли основное изображение
         $picnodes = $prod->getElementsByTagName('picture');
