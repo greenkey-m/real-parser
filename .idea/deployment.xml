@@ -33,7 +33,7 @@
       <paths name="real51100">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/www/siboney.ru/admin" local="$PROJECT_DIR$/upload/admin" web="/" />
           </mappings>
         </serverdata>
       </paths>
