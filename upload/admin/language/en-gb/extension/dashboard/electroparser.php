@@ -1,11 +1,11 @@
 <?php
 // Heading
-$_['heading_title']    		= 'Electrozon parser';
+$_['heading_title']    		= 'Real connector';
 
 // Text
 $_['text_extension']   		= 'Extensions';
-$_['text_success']     		= 'Success: You have modified Electrozon parser!';
-$_['text_edit']        		= 'Edit Electrozon parser Module';
+$_['text_success']     		= 'Success: You have modified Real connector!';
+$_['text_edit']        		= 'Edit Real connector Module';
 
 // Entry
 $_['entry_status']          = 'Status';
@@ -18,5 +18,5 @@ $_['entry_markup']			= 'Markup';
 $_['help_id']				= 'Some help string';
 
 // Error
-$_['error_permission'] 		= 'Warning: You do not have permission to modify Electrozon parser module!';
+$_['error_permission'] 		= 'Warning: You do not have permission to modify Real connector module!';
 $_['error_id']    			= 'Markup is required!';

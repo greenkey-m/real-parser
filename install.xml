@@ -2,7 +2,7 @@
 <modification>
     <name><![CDATA[<font color="#00FF00"><b>Electrozon parser</b></font>]]></name>
     <code>electroparser</code>
-    <version>0.1.2</version>
+    <version>0.2.0</version>
     <author><![CDATA[<font color="#263238"><b>Greenkey.ru</b></font>]]></author>
     <link>https://greenkey.ru</link>
     <!-- Adding to left side menu -->
@@ -26,7 +26,7 @@
         <operation error="log">
             <search><![CDATA[$_['text_other_status']]]></search>
             <add position="after" offset="1"><![CDATA[
-                $_['text_electroparser']	    = 'Парсер electrozon';
+                $_['text_electroparser']	    = 'Коннектор Real (electrozon, itp)';
 			]]></add>
         </operation>
     </file>
@@ -34,7 +34,7 @@
         <operation error="log">
             <search><![CDATA[$_['text_other_status']]]></search>
             <add position="after" offset="1"><![CDATA[
-                $_['text_electroparser']	    = 'Parser electrozon';
+                $_['text_electroparser']	    = 'Real connector (electrozon, itp)';
 			]]></add>
         </operation>
     </file>
