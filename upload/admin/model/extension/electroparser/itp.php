@@ -13,6 +13,10 @@
         .new {
             color: blue;
         }
+        .res {
+            color: #550000;
+        }
+
     </style>
 </head>
 <body>
@@ -100,7 +104,7 @@ function translit($s)
  */
 function itp_auth($login, $pass) {
     $ch = curl_init(ITP_API_PATH);
-//Аутентификация
+    //Аутентификация
     $dataAuth = array("request" => array(
         "method" => "login",
         "module" => "system"
@@ -243,7 +247,6 @@ try {
     }
 
 
-
     // Рекурсивно проходим по дереву категорий
     function list_cat($cats, $parent) {
         global $category_markup, $base_lang, $mysqli;
@@ -380,6 +383,15 @@ try {
     }
     list_cat($resCatalogTree, [0]);
 
+    // Считаем количество записанных категорий.
+    $q = "SELECT COUNT(*) AS cnt FROM " . DB_PREFIX . "category";
+    if (!$result = $mysqli->query($q)->fetch_array()) {
+        logging("Cannot check categories num: (" . $mysqli->errno . ") " . $mysqli->error,ERROR);
+    } else {
+        logging('Saved '.$result[0].' categories', H3, 'res');
+    }
+
+
     // TODO проход по массиву, записать в лог какие категории были удалены
 
     logging('Товары', H1, 'new');
@@ -407,10 +419,11 @@ try {
 
     // Получаем массив товаров
     $resProducts = json_decode($result);
+    logging('Количество описаний товаров: '.count($resProducts), H3, 'res');
 
-    foreach ($resProducts as $prod) {
-        //logging($prod->sku.' - '.$prod->name.' - '.$prod->part, NORMAL);
-    }
+    //foreach ($resProducts as $prod) {
+    //    logging($prod->sku.' - '.$prod->name.' - '.$prod->part, NORMAL);
+    //}
     // С самим каталогом ничего делать не надо, а вот по наличию надо загружать отсюда данные
 
     logging('Наличие и цена товаров', H1, 'new');
@@ -448,6 +461,46 @@ try {
 
     // Получаем данные о наличии
     $resPrices = json_decode($result);
+    logging('Количество активных товаров: '.count($resPrices->data->products), H3, 'res');
+
+
+    // Получаем изображения всех товаров
+    if (gethours('itp-images.json') > 10) {
+        $ch = curl_init("https://b2b.i-t-p.pro/api");
+        $dataAuth = array("request" => array(
+            "method" => "read",
+            "model"  => "products_clients_images",
+            "module" => "platform"
+        ),
+        "filter" => array([
+            "operator" => ">",
+            "property"  => "sku",
+            "value" => 0
+        ]),
+            "session_id" => $session
+        );
+        $dataAuthString = json_encode($dataAuth);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $dataAuthString);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Length: ' . strlen($dataAuthString)
+        ));
+        $result = curl_exec($ch);
+        curl_close ($ch);
+
+        $fp = fopen('itp-images.json', 'w');
+        fwrite($fp, $result);
+        fclose($fp);
+
+    } else {
+        // Читаем тз кэша
+        $result = file_get_contents('itp-images.json');
+    }
+
+    // Получаем данные о картиках
+    $resImages = json_decode($result);
+    logging('Количество изображений товаров: '.count($resImages->data->products_clients_images), H3, 'res');
 
 
     // Получаем текущую дата-время для записи в БД
@@ -487,6 +540,7 @@ try {
         // Для тестирования. прерывает выполнение парсера.
         $counter++;
         //if ($counter > 100) break;
+        if ($counter % 1000 == 0) echo "<p> Products uploaded ".$counter."</p>";
 
         $key = array_search($prod->sku, array_column($resProducts, 'sku'));
 
@@ -505,8 +559,16 @@ try {
         if (!$price) $price = 0;
         // Округляем все цены до десятков в большую сторону
         $price = ceil($price/10) * 10;
+
+
         // если изображения нет, вставляем пустое поле
         $image = "";
+        //$result = array_keys(array_column($resImages->data->products_clients_images, 'sku'), $product_id);
+        //if (count($result) > 0) {
+        //    echo "Images found: ";
+        //    print_r($result);
+        //    echo "<br>";
+        //}
 
         // Заменяем апострофы на кавычку. Можно заменять на код апострофа, в принципе
         $name = str_replace("'", '&#39;', $resProducts[$key]->name);                 // name         // meta_title
