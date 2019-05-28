@@ -29,6 +29,8 @@
  * Time: 14:20
  */
 
+exit();
+
 CONST ITP_API_PATH = 'https://b2b.i-t-p.pro/api';
 
 CONST ERROR = 'ERROR: ';
